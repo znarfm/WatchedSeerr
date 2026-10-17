@@ -7,6 +7,8 @@ import type {
   ConflictStatus,
   JellyfinItem,
   JellyfinUser,
+  MediaExternalLinks,
+  MediaType,
   SeerrUser,
   UserPlaybackState,
   WatchStatus,
@@ -24,6 +26,113 @@ let cachedAuditReport: { report: AuditReport; expiresAt: number } | null = null
 
 export function invalidateAuditCache() {
   cachedAuditReport = null
+}
+
+export function buildMediaExternalLinks(params: {
+  mediaType: MediaType
+  tmdbId: number
+  imdbId?: string
+  jellyfinItemId?: string
+  jellyfinServerId?: string
+  externalServiceSlug?: string
+  serviceUrl?: string
+  jellyfinBaseUrl?: string
+  seerrBaseUrl?: string
+  radarrBaseUrl?: string
+  sonarrBaseUrl?: string
+}): MediaExternalLinks {
+  const {
+    mediaType,
+    tmdbId,
+    imdbId,
+    jellyfinItemId,
+    jellyfinServerId,
+    externalServiceSlug,
+    serviceUrl,
+    jellyfinBaseUrl = process.env.JELLYFIN_URL || "",
+    seerrBaseUrl = process.env.SEERR_URL || "",
+    radarrBaseUrl = process.env.RADARR_URL || "",
+    sonarrBaseUrl = process.env.SONARR_URL || "",
+  } = params
+
+  const cleanUrl = (u: string) => u.replace(/\/+$/, "")
+  const jfBase = cleanUrl(jellyfinBaseUrl)
+  const seerrBase = cleanUrl(seerrBaseUrl)
+  const radarrBase = cleanUrl(radarrBaseUrl)
+  const sonarrBase = cleanUrl(sonarrBaseUrl)
+
+  const imdb = imdbId ? `https://www.imdb.com/title/${imdbId}/` : undefined
+  const letterboxd =
+    mediaType === "movie"
+      ? `https://letterboxd.com/tmdb/${tmdbId}/`
+      : undefined
+
+  let arr: string | undefined
+  if (serviceUrl) {
+    arr = serviceUrl
+  } else if (mediaType === "movie" && radarrBase) {
+    arr = `${radarrBase}/movie/${externalServiceSlug || tmdbId}`
+  } else if (mediaType === "tv" && sonarrBase) {
+    arr = externalServiceSlug
+      ? `${sonarrBase}/series/${externalServiceSlug}`
+      : sonarrBase
+  }
+
+  const jellyfin =
+    jfBase && jellyfinItemId
+      ? `${jfBase}/web/index.html#!/details?id=${jellyfinItemId}${
+          jellyfinServerId ? `&serverId=${jellyfinServerId}` : ""
+        }`
+      : undefined
+
+  const seerr = seerrBase ? `${seerrBase}/${mediaType}/${tmdbId}` : undefined
+
+  return { imdb, letterboxd, arr, jellyfin, seerr }
+}
+
+export function normalizeVideoQuality(
+  videoStream?: {
+    Width?: number
+    Height?: number
+    Codec?: string
+    DisplayTitle?: string
+  },
+  is4k?: boolean
+): { quality?: string; qualityFull?: string } {
+  let resolution: string | undefined
+  const w = videoStream?.Width || 0
+  const h = videoStream?.Height || 0
+  const display = videoStream?.DisplayTitle || ""
+
+  if (w >= 3800 || h >= 2100 || /\b(2160p|4k|uhd)\b/i.test(display)) {
+    resolution = "4K"
+  } else if (w >= 1900 || h >= 900 || /\b1080[pi]\b/i.test(display)) {
+    resolution = "1080p"
+  } else if (w >= 1200 || h >= 680 || /\b720p\b/i.test(display)) {
+    resolution = "720p"
+  } else if (w > 0 || h > 0 || /\b(576p|480p|sd)\b/i.test(display)) {
+    const match = display.match(/\b(576p|480p)\b/i)
+    resolution = match ? match[1].toLowerCase() : "480p"
+  } else if (is4k) {
+    resolution = "4K"
+  }
+
+  let codec: string | undefined
+  const rawCodec = (videoStream?.Codec || "").toLowerCase()
+  if (rawCodec === "hevc" || rawCodec === "h265" || /\b(hevc|x265|h\.?265)\b/i.test(display)) {
+    codec = "HEVC"
+  } else if (rawCodec === "h264" || rawCodec === "avc" || /\b(h\.?264|x264|avc)\b/i.test(display)) {
+    codec = "H.264"
+  } else if (rawCodec === "av1" || /\bav1\b/i.test(display)) {
+    codec = "AV1"
+  } else if (rawCodec) {
+    codec = rawCodec.toUpperCase()
+  }
+
+  const quality = resolution || codec
+  const qualityFull = resolution && codec ? `${resolution} ${codec}` : quality
+
+  return { quality, qualityFull }
 }
 
 // Persistent process-level cache for TMDB details (survives requests while server runs)
@@ -118,14 +227,31 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
   const jellyfin = options.jellyfinClient || new JellyfinClient()
 
   // 1. Concurrent bulk fetch from Seerr & Jellyfin
-  const [requests, jellyfinUsers, allLibraryItems, seerrUsers] = await Promise.all([
+  const [requests, jellyfinUsers, allLibraryItems, seerrUsers, allEpisodes] = await Promise.all([
     seerr.getRequests(200, "all"),
     jellyfin.getUsers(),
     jellyfin.getAllLibraryItems().catch(() => [] as JellyfinItem[]),
     typeof (seerr as any).getUsers === "function"
       ? (seerr as any).getUsers().catch(() => [] as SeerrUser[])
       : Promise.resolve([] as SeerrUser[]),
+    typeof (jellyfin as any).getAllEpisodesMetadata === "function"
+      ? (jellyfin as any).getAllEpisodesMetadata().catch(() => [] as JellyfinItem[])
+      : Promise.resolve([] as JellyfinItem[]),
   ])
+
+  // Build series episode stats for size and quality aggregation
+  const seriesEpisodeStats = new Map<string, { totalSize: number; videoStream?: any }>()
+  for (const ep of allEpisodes) {
+    if (!ep.SeriesId) continue
+    const current = seriesEpisodeStats.get(ep.SeriesId) || { totalSize: 0 }
+    const epSize = ep.Size ?? ep.MediaSources?.[0]?.Size ?? 0
+    current.totalSize += epSize
+    if (!current.videoStream) {
+      current.videoStream = ep.MediaSources?.[0]?.MediaStreams?.find((s: any) => s.Type === "Video")
+    }
+    seriesEpisodeStats.set(ep.SeriesId, current)
+  }
+
 
   // 2. Index Jellyfin library items by exact TMDB ID string
   const jfByTmdb = new Map<string, JellyfinItem>()
@@ -278,16 +404,26 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
       : cached?.genres
     const jellyfinImageTag = jellyfinItem.ImageTags?.Primary
 
-    // Quality determination (e.g. "4K", "1080p", "720p", "Web-DL")
-    let quality: string | undefined
-    const videoStream = jellyfinItem.MediaSources?.[0]?.MediaStreams?.find(
-      (s) => s.Type === "Video"
-    )
-    if (videoStream?.DisplayTitle) {
-      quality = videoStream.DisplayTitle
-    } else if (req.is4k) {
-      quality = "4K"
-    }
+    // Quality & video stream resolution
+    const epStats = jellyfinItem ? seriesEpisodeStats.get(jellyfinItem.Id) : undefined
+    const videoStream =
+      jellyfinItem?.MediaSources?.[0]?.MediaStreams?.find((s) => s.Type === "Video") ||
+      epStats?.videoStream
+    const { quality, qualityFull } = normalizeVideoQuality(videoStream, req.is4k)
+    const sizeBytes =
+      jellyfinItem?.Size ??
+      jellyfinItem?.MediaSources?.[0]?.Size ??
+      (epStats && epStats.totalSize > 0 ? epStats.totalSize : undefined)
+    const imdbId = jellyfinItem?.ProviderIds?.Imdb || media.imdbId
+    const externalLinks = buildMediaExternalLinks({
+      mediaType,
+      tmdbId,
+      imdbId,
+      jellyfinItemId: jellyfinItem?.Id,
+      jellyfinServerId: jellyfinItem?.ServerId,
+      externalServiceSlug: media.externalServiceSlug,
+      serviceUrl: media.serviceUrl,
+    })
 
     // Match requester profile
     const reqBy = req.requestedBy
@@ -376,9 +512,14 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
     if (activeNonRequesters.length > 0) {
       conflictStatus = "conflict"
       conflictReason = `Active viewer(s) in household: ${activeNonRequesters.map((u) => u.username).join(", ")}`
-    } else if (requesterState.status === "unplayed" && daysSinceAdded >= ghostThreshold) {
-      conflictStatus = "ghost"
-      conflictReason = `Requester has never watched item (${daysSinceAdded} days since requested)`
+    } else if (requesterState.status === "unplayed") {
+      if (daysSinceAdded >= ghostThreshold) {
+        conflictStatus = "ghost"
+        conflictReason = `Requester has never watched item (${daysSinceAdded} days since requested)`
+      } else {
+        conflictStatus = "new"
+        conflictReason = `Recently requested (${daysSinceAdded} days ago) — awaiting first watch`
+      }
     } else if (requesterState.status === "in_progress") {
       const requesterDays = calculateDaysAgo(requesterState.lastPlayedDate)
       if (requesterDays !== null && requesterDays <= conflictThreshold) {
@@ -400,12 +541,11 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
       requesterAvatarUrl = `/api/proxy/avatar?avatar=${encodeURIComponent(reqBy.avatar)}`
     }
 
-    const sizeBytes = jellyfinItem?.Size ?? jellyfinItem?.MediaSources?.[0]?.Size
-
     auditItems.push({
       id: itemIdentifier,
       requestId: req.id,
       tmdbId,
+      imdbId,
       jellyfinItemId: jellyfinItem?.Id,
       title,
       year,
@@ -414,8 +554,10 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
       overview,
       genres,
       quality,
+      qualityFull,
       jellyfinImageTag,
       sizeBytes,
+      externalLinks,
       requestedAt,
       requester: {
         id: req.requestedBy?.id || 0,
@@ -434,6 +576,7 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
   }
 
   const safeCount = auditItems.filter((i) => i.conflictStatus === "safe").length
+  const newCount = auditItems.filter((i) => i.conflictStatus === "new").length
   const conflictCount = auditItems.filter((i) => i.conflictStatus === "conflict").length
   const ghostCount = auditItems.filter((i) => i.conflictStatus === "ghost").length
   const whitelistedCount = auditItems.filter((i) => i.isWhitelisted).length
@@ -442,6 +585,7 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
     generatedAt: new Date().toISOString(),
     totalItems: auditItems.length,
     safeCount,
+    newCount,
     conflictCount,
     ghostCount,
     whitelistedCount,

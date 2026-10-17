@@ -1,4 +1,4 @@
-import type { Column, ColumnDef } from "@tanstack/react-table"
+import type { Column, ColumnDef, RowData } from "@tanstack/react-table"
 import type { AuditMediaItem } from "@/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -26,7 +26,14 @@ import {
   IconChevronDown,
   IconChevronRight,
   IconLoader2,
+  IconSparkles,
 } from "@tabler/icons-react"
+
+declare module "@tanstack/react-table" {
+  interface ColumnMeta<TData extends RowData, TValue> {
+    className?: string
+  }
+}
 
 export interface TableMeta {
   onToggleWhitelist: (item: AuditMediaItem) => void
@@ -71,6 +78,7 @@ function SortHeader({ column, title }: { column: Column<AuditMediaItem, any>; ti
 export const columns: ColumnDef<AuditMediaItem>[] = [
   {
     id: "select",
+    meta: { className: "w-10" },
     header: ({ table }) => (
       <div onClick={(e) => e.stopPropagation()} className="flex items-center">
         <Checkbox
@@ -99,6 +107,7 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
   {
     id: "title",
     accessorKey: "title",
+    meta: { className: "min-w-[220px] max-w-[340px]" },
     header: ({ column }) => <SortHeader column={column} title="Media" />,
     cell: ({ row, table }) => {
       const item = row.original
@@ -200,6 +209,7 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
   {
     id: "requester",
     accessorFn: (row) => row.requester.username,
+    meta: { className: "w-36" },
     header: ({ column }) => <SortHeader column={column} title="Requester" />,
     filterFn: "equalsString",
     cell: ({ row }) => {
@@ -222,6 +232,7 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
   {
     id: "progress",
     accessorFn: (row) => row.requesterState.progressPercent,
+    meta: { className: "w-44" },
     header: ({ column }) => <SortHeader column={column} title="Requester Progress" />,
     filterFn: (row, _id, filterValue) => {
       if (!filterValue || filterValue === "all") return true
@@ -245,6 +256,7 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
   {
     id: "household",
     accessorFn: (row) => row.householdStates.filter((h) => h.status !== "unplayed").length,
+    meta: { className: "w-28 hidden md:table-cell" },
     header: ({ column }) => <SortHeader column={column} title="Household" />,
     cell: ({ row }) => {
       const activeHousehold = row.original.householdStates.filter(
@@ -280,6 +292,7 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
   {
     id: "size",
     accessorFn: (row) => row.sizeBytes ?? 0,
+    meta: { className: "w-36 whitespace-nowrap hidden md:table-cell" },
     header: ({ column }) => <SortHeader column={column} title="Size" />,
     cell: ({ row }) => {
       const item = row.original
@@ -299,7 +312,7 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
             {formattedSize}
           </span>
           {item.quality && (
-            <Badge variant="secondary" className="text-[10px] px-1 py-0 font-mono">
+            <Badge variant="secondary" className="text-[10px] px-1 py-0 font-mono max-w-[72px] truncate">
               {item.quality}
             </Badge>
           )}
@@ -310,6 +323,7 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
   {
     id: "requested",
     accessorFn: (row) => new Date(row.requestedAt).getTime() || 0,
+    meta: { className: "w-28 whitespace-nowrap hidden lg:table-cell" },
     header: ({ column }) => <SortHeader column={column} title="Requested" />,
     cell: ({ row }) => {
       const dateStr = row.original.requestedAt
@@ -320,6 +334,7 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
   {
     id: "inactive",
     accessorKey: "daysSinceLastPlayed",
+    meta: { className: "w-24 whitespace-nowrap hidden sm:table-cell" },
     header: ({ column }) => <SortHeader column={column} title="Inactive" />,
     sortingFn: (rowA, rowB, columnId) =>
       sortInactiveDays(rowA.getValue(columnId), rowB.getValue(columnId)),
@@ -336,6 +351,7 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
   {
     id: "status",
     accessorKey: "conflictStatus",
+    meta: { className: "w-28 whitespace-nowrap" },
     header: ({ column }) => <SortHeader column={column} title="Retention Status" />,
     filterFn: "equalsString",
     cell: ({ row }) => {
@@ -344,6 +360,13 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
         return (
           <Badge variant="outline" className="text-emerald-500 border-emerald-500/30 gap-1">
             <IconCheck className="size-3" /> Safe
+          </Badge>
+        )
+      }
+      if (status === "new") {
+        return (
+          <Badge className="bg-sky-500/15 text-sky-400 border border-sky-500/30 hover:bg-sky-500/20">
+            <IconSparkles className="size-3 mr-1" /> New
           </Badge>
         )
       }
@@ -371,6 +394,7 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
   },
   {
     id: "actions",
+    meta: { className: "w-12 text-right" },
     header: () => <span className="text-right block">Actions</span>,
     enableSorting: false,
     cell: ({ row, table }) => {

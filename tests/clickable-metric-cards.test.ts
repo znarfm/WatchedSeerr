@@ -2,7 +2,7 @@ import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import React from "react"
 import { renderToStaticMarkup } from "react-dom/server"
-import { computeMetricCounts, resolveStatusCardClick, DataTable } from "../components/audit-table/data-table"
+import { computeMetricCounts, resolveStatusCardClick, DataTable, isSearchShortcut } from "../components/audit-table/data-table"
 import { sortInactiveDays, columns } from "../components/audit-table/columns"
 import { TooltipProvider } from "../components/ui/tooltip"
 import type { AuditMediaItem } from "../types"
@@ -106,23 +106,51 @@ const mockItems: AuditMediaItem[] = [
     conflictReason: "Unplayed request > 30 days",
     isWhitelisted: false,
   },
+  {
+    id: "item-4",
+    requestId: 4,
+    tmdbId: 104,
+    title: "Agatha All Along",
+    year: 2024,
+    mediaType: "tv",
+    requestedAt: "2026-03-01T00:00:00Z",
+    requester: {
+      id: 4,
+      username: "dave",
+    },
+    requesterState: {
+      userId: "u-4",
+      username: "dave",
+      isRequester: true,
+      status: "unplayed",
+      progressPercent: 0,
+      playCount: 0,
+    },
+    householdStates: [],
+    daysSinceLastPlayed: null,
+    conflictStatus: "new",
+    conflictReason: "Recently requested (2 days ago) — awaiting first watch",
+    isWhitelisted: false,
+  },
 ]
 
 describe("Clickable Metric Cards & Table UX Seam", () => {
-  it("computeMetricCounts tallies total, safe, conflict, and ghost items correctly", () => {
+  it("computeMetricCounts tallies total, safe, newCount, conflict, and ghost items correctly", () => {
     const counts = computeMetricCounts(mockItems)
     assert.deepEqual(counts, {
-      total: 3,
+      total: 4,
       safe: 1,
+      newCount: 1,
       conflict: 1,
       ghost: 1,
     })
 
-    // After purging one item
+    // After purging first item
     const reduced = computeMetricCounts(mockItems.slice(1))
     assert.deepEqual(reduced, {
-      total: 2,
+      total: 3,
       safe: 0,
+      newCount: 1,
       conflict: 1,
       ghost: 1,
     })
@@ -131,21 +159,50 @@ describe("Clickable Metric Cards & Table UX Seam", () => {
   it("resolveStatusCardClick handles status selection and toggling back to all", () => {
     // Clicking a category sets it
     assert.equal(resolveStatusCardClick("all", "safe"), "safe")
+    assert.equal(resolveStatusCardClick("all", "new"), "new")
     assert.equal(resolveStatusCardClick("all", "conflict"), "conflict")
     assert.equal(resolveStatusCardClick("all", "ghost"), "ghost")
 
     // Clicking the already-active category toggles it back to undefined ("all")
     assert.equal(resolveStatusCardClick("safe", "safe"), undefined)
+    assert.equal(resolveStatusCardClick("new", "new"), undefined)
     assert.equal(resolveStatusCardClick("conflict", "conflict"), undefined)
     assert.equal(resolveStatusCardClick("ghost", "ghost"), undefined)
 
     // Switching between categories selects the newly clicked one
-    assert.equal(resolveStatusCardClick("safe", "conflict"), "conflict")
+    assert.equal(resolveStatusCardClick("safe", "new"), "new")
+    assert.equal(resolveStatusCardClick("new", "conflict"), "conflict")
     assert.equal(resolveStatusCardClick("conflict", "ghost"), "ghost")
 
     // Clicking "Total Audited" ("all") always clears filter to undefined
     assert.equal(resolveStatusCardClick("safe", "all"), undefined)
+    assert.equal(resolveStatusCardClick("new", "all"), undefined)
     assert.equal(resolveStatusCardClick("all", "all"), undefined)
+  })
+
+  it("isSearchShortcut identifies search shortcut keystrokes across platforms and inputs", () => {
+    // Ctrl+K and ⌘K trigger search
+    assert.equal(isSearchShortcut({ key: "k", ctrlKey: true }), true)
+    assert.equal(isSearchShortcut({ key: "K", ctrlKey: true }), true)
+    assert.equal(isSearchShortcut({ key: "k", metaKey: true }), true)
+    assert.equal(isSearchShortcut({ key: "k", ctrlKey: true, targetTagName: "INPUT" }), true)
+
+    // Alt modifier blocks Ctrl+K
+    assert.equal(isSearchShortcut({ key: "k", ctrlKey: true, altKey: true }), false)
+
+    // Slash triggers search when not inside an editable tag
+    assert.equal(isSearchShortcut({ key: "/", targetTagName: "DIV" }), true)
+    assert.equal(isSearchShortcut({ key: "/", targetTagName: "BODY" }), true)
+    assert.equal(isSearchShortcut({ key: "/", targetTagName: undefined }), true)
+
+    // Slash is ignored inside INPUT, TEXTAREA, and SELECT
+    assert.equal(isSearchShortcut({ key: "/", targetTagName: "INPUT" }), false)
+    assert.equal(isSearchShortcut({ key: "/", targetTagName: "TEXTAREA" }), false)
+    assert.equal(isSearchShortcut({ key: "/", targetTagName: "SELECT" }), false)
+
+    // Other keys do not trigger search
+    assert.equal(isSearchShortcut({ key: "r", ctrlKey: true }), false)
+    assert.equal(isSearchShortcut({ key: "Escape" }), false)
   })
 
   it("sortInactiveDays treats null ('Never') as Infinity", () => {
@@ -189,13 +246,19 @@ describe("Clickable Metric Cards & Table UX Seam", () => {
     )
   })
 
-  it("renders DataTable SSR markup with 4 clickable metric card buttons, toolbar filters, and rich columns", () => {
+  it("renders DataTable SSR markup with 5 clickable metric card buttons, toolbar filters, Kbd hints, and responsive columns", () => {
     const html = renderToStaticMarkup(
       React.createElement(
         TooltipProvider,
         null,
         React.createElement(DataTable, { initialData: mockItems })
       )
+    )
+
+    // Metric cards rendered in responsive 5-card grid
+    assert.ok(
+      html.includes("grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"),
+      "Metric cards arranged in responsive grid"
     )
 
     // Metric cards rendered as buttons with aria-pressed
@@ -205,13 +268,28 @@ describe("Clickable Metric Cards & Table UX Seam", () => {
     )
     assert.ok(html.includes("Total Audited"))
     assert.ok(html.includes("Safe to Purge"))
+    assert.ok(html.includes("New / Unwatched"))
+    assert.ok(html.includes("text-sky-500"))
     assert.ok(html.includes("Active Conflicts"))
     assert.ok(html.includes("Ghost Requests"))
 
-    // Rich columns rendered: Size, Requested, Household
+    // Keyboard shortcut hints rendered
+    assert.ok(html.includes("Ctrl"), "Search bar contains Ctrl Kbd")
+    assert.ok(html.includes("K"), "Search bar contains K Kbd")
+    assert.ok(html.includes('data-slot="kbd"'), "Search bar renders Kbd shortcut")
+    assert.ok(html.includes("Refresh"), "Toolbar contains Refresh button")
+
+    // Responsive table columns rendered with responsive classes
     assert.ok(html.includes("Size"), "Header contains Size column")
     assert.ok(html.includes("Requested"), "Header contains Requested column")
     assert.ok(html.includes("Household"), "Header contains Household column")
+    assert.ok(html.includes("hidden md:table-cell"), "Columns contain hidden md:table-cell")
+    assert.ok(html.includes("hidden lg:table-cell"), "Columns contain hidden lg:table-cell")
+    assert.ok(html.includes("hidden sm:table-cell"), "Columns contain hidden sm:table-cell")
+
+    // Sky-blue "New" status badge for item-4
+    assert.ok(html.includes("bg-sky-500/15"), "Status cell contains sky-blue New badge")
+    assert.ok(html.includes("text-sky-400"), "Status cell contains text-sky-400")
 
     // Disk size formatted in GB and MB
     assert.ok(html.includes("14.0 GB"), "Table row formats 15 GB as 14.0 GB")

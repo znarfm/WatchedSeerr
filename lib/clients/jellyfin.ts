@@ -69,4 +69,16 @@ export class JellyfinClient {
     )
     return res.Items || []
   }
+
+  /**
+   * Fetches episode size and media stream metadata across the library in a single call
+   * so parent TV Series items can aggregate total disk size and video resolution/codec.
+   */
+  async getAllEpisodesMetadata(): Promise<JellyfinItem[]> {
+    const res = await this.request<JellyfinItemsResponse>(
+      "/Items?Recursive=true&IncludeItemTypes=Episode&Fields=MediaSources,MediaStreams,Size&EnableUserData=false&EnableImages=false&EnableTotalRecordCount=false&Limit=10000"
+    )
+    return res.Items || []
+  }
 }
+

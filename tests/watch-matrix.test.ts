@@ -1,9 +1,16 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import type { AuditMediaItem } from "../types"
-import { deriveMatrixUsers, getUserCellState } from "../components/matrix-table/watch-matrix"
+import { deriveMatrixUsers, getUserCellState, isSearchShortcut } from "../components/matrix-table/watch-matrix"
 
 describe("Watch Matrix Unit Seams", () => {
+  it("re-exports and validates isSearchShortcut helper", () => {
+    assert.equal(isSearchShortcut({ key: "k", ctrlKey: true }), true)
+    assert.equal(isSearchShortcut({ key: "k", metaKey: true }), true)
+    assert.equal(isSearchShortcut({ key: "/", targetTagName: "DIV" }), true)
+    assert.equal(isSearchShortcut({ key: "/", targetTagName: "INPUT" }), false)
+  })
+
   it("deriveMatrixUsers reconciles users and counts requested & watched totals", () => {
     const items: AuditMediaItem[] = [
       {
@@ -214,6 +221,33 @@ describe("Watch Matrix Unit Seams", () => {
         conflictReason: "Completed by requester",
         isWhitelisted: true,
       },
+      {
+        id: "m2",
+        requestId: 2,
+        tmdbId: 102,
+        title: "Fresh Show",
+        year: 2024,
+        mediaType: "tv",
+        requestedAt: "2026-01-02T00:00:00Z",
+        requester: {
+          id: 2,
+          username: "Bob",
+          matchedJellyfinUserId: "jf-bob",
+        },
+        requesterState: {
+          userId: "jf-bob",
+          username: "Bob",
+          isRequester: true,
+          status: "unplayed",
+          progressPercent: 0,
+          playCount: 0,
+        },
+        householdStates: [],
+        daysSinceLastPlayed: null,
+        conflictStatus: "new",
+        conflictReason: "Fresh request awaiting watch",
+        isWhitelisted: false,
+      },
     ]
 
     const html = renderToStaticMarkup(
@@ -231,11 +265,21 @@ describe("Watch Matrix Unit Seams", () => {
     assert.ok(html.includes("2010"))
     assert.ok(html.includes("Whitelisted"))
     assert.ok(html.includes("Safe"))
+    assert.ok(html.includes("Fresh Show"))
     assert.ok(html.includes("Req: Alice"))
+    // Status 'new' badge
+    assert.ok(html.includes("border-sky-500/40"), "Status badge contains border-sky-500/40")
+    assert.ok(html.includes("text-sky-400"), "Status badge contains text-sky-400")
+    assert.ok(html.includes("New"), "Status cell renders 'New' badge text")
     // User column stats
     assert.ok(html.includes("1 req • 1 watched"))
     // REQ badge on user cell
     assert.ok(html.includes("REQ"))
+    // Keyboard shortcut hints rendered
+    assert.ok(html.includes("Ctrl"), "Search bar contains Ctrl Kbd")
+    assert.ok(html.includes("K"), "Search bar contains K Kbd")
+    assert.ok(html.includes('data-slot="kbd"'), "Search bar renders Kbd shortcut")
+    assert.ok(html.includes("Refresh"), "Toolbar contains Refresh button")
     // Pagination footer
     assert.ok(html.includes("Page 1 of 1"))
     assert.ok(html.includes("Rows per page:"))

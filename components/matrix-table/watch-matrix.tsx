@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import {
   Table,
   TableBody,
@@ -21,28 +22,15 @@ import {
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Kbd, KbdGroup } from "@/components/ui/kbd"
+import { toast } from "@/components/ui/toast"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { MediaDetailSheet, type DeleteTarget } from "@/components/media-detail-sheet"
 import {
   IconSearch,
   IconArrowUp,
@@ -54,8 +42,13 @@ import {
   IconMovie,
   IconDeviceTv,
 } from "@tabler/icons-react"
-import { toggleWhitelistAction, deleteMediaAction } from "@/lib/actions"
+import { refreshAuditAction } from "@/lib/actions"
+import { cn } from "cn"
 import type { AuditMediaItem, ConflictStatus, UserPlaybackState } from "@/types"
+
+import { isSearchShortcut } from "@/components/audit-table/data-table"
+
+export { isSearchShortcut }
 
 export interface MatrixUserColumn {
   key: string // userId or lowercase username
@@ -136,6 +129,13 @@ interface WatchMatrixProps {
 }
 
 export function WatchMatrix({ initialData }: WatchMatrixProps) {
+  let router: any = null
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    router = useRouter()
+  } catch {
+    router = { refresh: () => {} }
+  }
   const [data, setData] = React.useState<AuditMediaItem[]>(initialData)
   React.useEffect(() => {
     setData(initialData)
@@ -149,8 +149,61 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
   const [pageIndex, setPageIndex] = React.useState(0)
   const [pageSize, setPageSize] = React.useState(25)
   const [selectedItem, setSelectedItem] = React.useState<AuditMediaItem | null>(null)
-  const [deleteCandidate, setDeleteCandidate] = React.useState<AuditMediaItem | null>(null)
+  const [deleteCandidate, setDeleteCandidate] = React.useState<DeleteTarget | null>(null)
   const [isPending, startTransition] = React.useTransition()
+  const [isRefreshing, setIsRefreshing] = React.useState(false)
+  const searchInputRef = React.useRef<HTMLInputElement>(null)
+
+  const handleRefresh = React.useCallback(() => {
+    setIsRefreshing(true)
+    startTransition(async () => {
+      try {
+        await refreshAuditAction()
+        router.refresh()
+        try {
+          toast.add({
+            title: "Audit Refreshed",
+            description: "Latest playback and request states loaded.",
+            type: "info",
+          })
+        } catch {}
+      } catch (err: any) {
+        try {
+          toast.add({
+            title: "Refresh Failed",
+            description: err?.message || "Failed to refresh audit data",
+            type: "error",
+          })
+        } catch {}
+      } finally {
+        setIsRefreshing(false)
+      }
+    })
+  }, [router])
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        isSearchShortcut({
+          key: e.key,
+          ctrlKey: e.ctrlKey,
+          metaKey: e.metaKey,
+          altKey: e.altKey,
+          targetTagName: (e.target as HTMLElement)?.tagName,
+        })
+      ) {
+        e.preventDefault()
+        searchInputRef.current?.focus()
+        searchInputRef.current?.select()
+      } else if (e.altKey && e.key.toLowerCase() === "r") {
+        e.preventDefault()
+        handleRefresh()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [handleRefresh])
 
   // Reconcile user columns from current data
   const userColumns = React.useMemo(() => deriveMatrixUsers(data), [data])
@@ -260,57 +313,15 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
     setPageIndex(0)
   }
 
-  // Whitelist toggle
-  const handleToggleWhitelist = (item: AuditMediaItem) => {
-    startTransition(async () => {
-      const res = await toggleWhitelistAction({
-        id: item.id,
-        tmdbId: item.tmdbId,
-        title: item.title,
-        mediaType: item.mediaType,
-      })
-      if (res.success && res.isWhitelisted !== undefined) {
-        setData((prev) =>
-          prev.map((i) => (i.id === item.id ? { ...i, isWhitelisted: res.isWhitelisted as boolean } : i))
-        )
-        if (selectedItem?.id === item.id) {
-          setSelectedItem((prev) =>
-            prev ? { ...prev, isWhitelisted: res.isWhitelisted as boolean } : null
-          )
-        }
-      }
-    })
-  }
-
-  // Purge confirmation
-  const confirmDelete = () => {
-    if (!deleteCandidate) return
-    const target = deleteCandidate
-    startTransition(async () => {
-      const res = await deleteMediaAction({
-        id: target.id,
-        tmdbId: target.tmdbId,
-        mediaType: target.mediaType,
-        target: "all",
-      })
-      if (res.success) {
-        setData((prev) => prev.filter((i) => i.id !== target.id))
-        if (selectedItem?.id === target.id) {
-          setSelectedItem(null)
-        }
-      }
-      setDeleteCandidate(null)
-    })
-  }
-
   return (
     <div className="space-y-4">
       {/* Toolbar Controls */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/20 p-3 border border-border">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
           {/* Title search */}
-          <div className="relative w-56">
+          <div className="relative w-full sm:w-64">
             <Input
+              ref={searchInputRef}
               type="text"
               placeholder="Search by title..."
               value={search}
@@ -318,9 +329,26 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
                 setSearch(e.target.value)
                 setPageIndex(0)
               }}
-              className="h-8 pl-8 text-xs bg-background"
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setSearch("")
+                  setPageIndex(0)
+                  e.currentTarget.blur()
+                }
+              }}
+              className="h-8 pl-8 pr-16 text-xs bg-background"
             />
             <IconSearch className="pointer-events-none absolute left-2.5 top-2 size-4 text-muted-foreground" />
+            <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+              {search ? (
+                <Kbd className="text-[10px] h-4 px-1">Esc</Kbd>
+              ) : (
+                <KbdGroup>
+                  <Kbd className="text-[10px] h-4 px-1">Ctrl</Kbd>
+                  <Kbd className="text-[10px] h-4 px-1">K</Kbd>
+                </KbdGroup>
+              )}
+            </div>
           </div>
 
           {/* Media Type Tabs */}
@@ -338,79 +366,109 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
             </TabsList>
           </Tabs>
 
-          {/* Requester Filter */}
-          <Select
-            value={requesterFilter}
-            onValueChange={(val) => {
-              if (val) {
-                setRequesterFilter(val)
-                setPageIndex(0)
-              }
-            }}
-          >
-            <SelectTrigger className="h-8 min-w-36 text-xs bg-background">
-              <SelectValue placeholder="All Requesters">
-                {(val: any) => (val === "all" || !val ? "All Requesters" : val)}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Requesters</SelectItem>
-              {uniqueRequesters.map((u) => (
-                <SelectItem key={u} value={u}>
-                  {u}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Retention Status Filter */}
-          <Select
-            value={statusFilter}
-            onValueChange={(val) => {
-              if (val) {
-                setStatusFilter(val as "all" | ConflictStatus)
-                setPageIndex(0)
-              }
-            }}
-          >
-            <SelectTrigger className="h-8 min-w-32 text-xs bg-background">
-              <SelectValue placeholder="All Statuses">
-                {(val: any) =>
-                  val === "all" || !val
-                    ? "All Statuses"
-                    : val === "safe"
-                    ? "Safe"
-                    : val === "conflict"
-                    ? "Conflict"
-                    : "Ghost"
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
+            {/* Requester Filter */}
+            <Select
+              value={requesterFilter}
+              onValueChange={(val) => {
+                if (val) {
+                  setRequesterFilter(val)
+                  setPageIndex(0)
                 }
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="safe">Safe</SelectItem>
-              <SelectItem value="conflict">Conflict</SelectItem>
-              <SelectItem value="ghost">Ghost</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Reset Button */}
-          {isFiltered && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleReset}
-              className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+              }}
             >
-              <IconRefresh className="size-3.5 mr-1" />
-              Reset
-            </Button>
-          )}
+              <SelectTrigger className="h-8 min-w-36 text-xs bg-background">
+                <SelectValue placeholder="All Requesters">
+                  {(val: any) => (val === "all" || !val ? "All Requesters" : val)}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Requesters</SelectItem>
+                {uniqueRequesters.map((u) => (
+                  <SelectItem key={u} value={u}>
+                    {u}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Retention Status Filter */}
+            <Select
+              value={statusFilter}
+              onValueChange={(val) => {
+                if (val) {
+                  setStatusFilter(val as "all" | ConflictStatus)
+                  setPageIndex(0)
+                }
+              }}
+            >
+              <SelectTrigger className="h-8 min-w-32 text-xs bg-background">
+                <SelectValue placeholder="All Statuses">
+                  {(val: any) =>
+                    val === "all" || !val
+                      ? "All Statuses"
+                      : val === "safe"
+                      ? "Safe"
+                      : val === "new"
+                      ? "New"
+                      : val === "conflict"
+                      ? "Conflict"
+                      : "Ghost"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="safe">Safe</SelectItem>
+                <SelectItem value="new">New</SelectItem>
+                <SelectItem value="conflict">Conflict</SelectItem>
+                <SelectItem value="ghost">Ghost</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Reset Button */}
+            {isFiltered && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReset}
+                className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <IconRefresh className="size-3.5 mr-1" />
+                Reset
+              </Button>
+            )}
+          </div>
         </div>
 
-        {/* Total Count */}
-        <div className="text-xs text-muted-foreground font-mono">
-          {filteredAndSortedItems.length} media items
+        {/* Total Count and Refresh */}
+        <div className="flex items-center gap-2">
+          <div className="text-xs text-muted-foreground font-mono mr-1">
+            {filteredAndSortedItems.length} media items
+          </div>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="xs"
+                  className="h-8 text-xs"
+                  disabled={isPending || isRefreshing}
+                  onClick={handleRefresh}
+                >
+                  <IconRefresh className={cn("size-3.5 mr-1", isRefreshing && "animate-spin")} />
+                  Refresh
+                </Button>
+              }
+            />
+            <TooltipContent className="flex items-center gap-1.5">
+              <span>Refresh audit data</span>
+              <KbdGroup>
+                <Kbd className="text-[10px] h-4 px-1">Alt</Kbd>
+                <Kbd className="text-[10px] h-4 px-1">R</Kbd>
+              </KbdGroup>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -476,7 +534,26 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
           </TableHeader>
 
           <TableBody>
-            {paginatedItems.length === 0 ? (
+            {isRefreshing ? (
+              Array.from({ length: 8 }).map((_, idx) => (
+                <TableRow key={`refresh-skeleton-${idx}`}>
+                  <TableCell className="sticky left-0 z-10 bg-background border-r border-border p-3">
+                    <div className="flex items-center gap-2.5">
+                      <Skeleton className="size-9 rounded shrink-0" />
+                      <div className="space-y-1.5 flex-1 min-w-0">
+                        <Skeleton className="h-3.5 w-3/4" />
+                        <Skeleton className="h-2.5 w-1/2" />
+                      </div>
+                    </div>
+                  </TableCell>
+                  {userColumns.map((col) => (
+                    <TableCell key={col.key} className="p-2.5 text-center border-l border-border/50">
+                      <Skeleton className="h-8 w-full" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : paginatedItems.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={1 + userColumns.length}
@@ -546,6 +623,8 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
                               className={`text-[9px] px-1 py-0 uppercase ${
                                 item.conflictStatus === "safe"
                                   ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/10"
+                                  : item.conflictStatus === "new"
+                                  ? "border-sky-500/40 text-sky-400 bg-sky-500/10"
                                   : item.conflictStatus === "conflict"
                                   ? "border-amber-500/40 text-amber-400 bg-amber-500/10"
                                   : "border-rose-500/40 text-rose-400 bg-rose-500/10"
@@ -553,6 +632,8 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
                             >
                               {item.conflictStatus === "safe"
                                 ? "Safe"
+                                : item.conflictStatus === "new"
+                                ? "New"
                                 : item.conflictStatus === "conflict"
                                 ? "Conflict"
                                 : "Ghost"}
@@ -672,245 +753,21 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
         </div>
       </div>
 
-      {/* Slide-over Inspection Sheet */}
-      <Sheet open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
-        {selectedItem && (
-          <SheetContent side="right" className="w-[440px] sm:max-w-md overflow-y-auto p-6">
-            {(() => {
-              const sheetPosterSrc = selectedItem.jellyfinItemId
-                ? `/api/proxy/poster?jellyfinItemId=${selectedItem.jellyfinItemId}&w=400${
-                    selectedItem.jellyfinImageTag
-                      ? `&tag=${encodeURIComponent(selectedItem.jellyfinImageTag)}`
-                      : ""
-                  }`
-                : undefined
-
-              const sizeGb = selectedItem.sizeBytes
-                ? `${(selectedItem.sizeBytes / 1024 / 1024 / 1024).toFixed(1)} GB`
-                : null
-
-              const requesterAvatarSrc =
-                selectedItem.requester.requesterAvatarUrl ||
-                selectedItem.requesterState.avatarUrl
-
-              return (
-                <>
-                  <SheetHeader className="text-left space-y-4">
-                    <div className="flex gap-4">
-                      <div className="relative size-24 shrink-0 overflow-hidden rounded border border-border bg-muted">
-                        {sheetPosterSrc ? (
-                          <img
-                            src={sheetPosterSrc}
-                            alt={selectedItem.title}
-                            className="size-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex size-full items-center justify-center text-muted-foreground">
-                            {selectedItem.mediaType === "movie" ? (
-                              <IconMovie className="size-8" />
-                            ) : (
-                              <IconDeviceTv className="size-8" />
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex flex-col justify-between min-w-0 flex-1">
-                        <div>
-                          <SheetTitle className="text-base font-semibold leading-tight line-clamp-2">
-                            {selectedItem.title}
-                          </SheetTitle>
-                          <SheetDescription className="text-xs mt-1">
-                            {selectedItem.year && <span>{selectedItem.year} • </span>}
-                            <span className="uppercase">{selectedItem.mediaType}</span>
-                            {sizeGb && <span> • {sizeGb}</span>}
-                          </SheetDescription>
-                        </div>
-
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {selectedItem.quality && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-mono">
-                              {selectedItem.quality}
-                            </Badge>
-                          )}
-                          {selectedItem.genres?.map((g) => (
-                            <Badge key={g} variant="outline" className="text-[10px] px-1.5 py-0">
-                              {g}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </SheetHeader>
-
-                  <div className="mt-6 space-y-5">
-                    {/* Synopsis Overview */}
-                    {selectedItem.overview && (
-                      <div className="space-y-1">
-                        <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          Overview
-                        </h4>
-                        <p className="text-xs text-foreground/90 leading-relaxed bg-muted/20 p-2.5 border border-border">
-                          {selectedItem.overview}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Conflict / Retention Status */}
-                    <div
-                      className={`p-3 text-xs border ${
-                        selectedItem.conflictStatus === "safe"
-                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                          : selectedItem.conflictStatus === "conflict"
-                          ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
-                          : "bg-rose-500/10 border-rose-500/30 text-rose-400"
-                      }`}
-                    >
-                      <span className="font-semibold uppercase tracking-wider block mb-1">
-                        {selectedItem.conflictStatus} Status
-                      </span>
-                      {selectedItem.conflictReason}
-                    </div>
-
-                    {/* Household Playback Breakdown */}
-                    <div>
-                      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                        Household Playback Breakdown
-                      </h4>
-                      <div className="space-y-3">
-                        {/* Requester Card */}
-                        <Card className="p-3 bg-muted/40 border border-primary/40 space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-medium flex items-center gap-2">
-                              <Avatar className="size-5 shrink-0">
-                                {requesterAvatarSrc && (
-                                  <AvatarImage
-                                    src={requesterAvatarSrc}
-                                    alt={selectedItem.requester.username}
-                                  />
-                                )}
-                                <AvatarFallback className="text-[10px] uppercase font-mono">
-                                  {selectedItem.requester.username.slice(0, 2)}
-                                </AvatarFallback>
-                              </Avatar>
-                              {selectedItem.requester.username} (Requester)
-                            </span>
-                            <span className="font-mono text-xs">
-                              {selectedItem.requesterState.progressPercent}%
-                            </span>
-                          </div>
-                          <Progress
-                            value={selectedItem.requesterState.progressPercent}
-                            className="h-1.5"
-                          />
-                          <div className="flex justify-between text-[11px] text-muted-foreground">
-                            <span>Status: {selectedItem.requesterState.status}</span>
-                            <span>
-                              Last played:{" "}
-                              {selectedItem.requesterState.lastPlayedDate
-                                ? new Date(selectedItem.requesterState.lastPlayedDate).toLocaleDateString()
-                                : "Never"}
-                            </span>
-                          </div>
-                        </Card>
-
-                        {/* Household Member Cards */}
-                        {selectedItem.householdStates.map((user) => (
-                          <Card
-                            key={user.userId}
-                            className="p-3 bg-muted/20 border border-border space-y-2"
-                          >
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="font-medium flex items-center gap-2">
-                                <Avatar className="size-5 shrink-0">
-                                  {user.avatarUrl && (
-                                    <AvatarImage src={user.avatarUrl} alt={user.username} />
-                                  )}
-                                  <AvatarFallback className="text-[10px] uppercase font-mono">
-                                    {user.username.slice(0, 2)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                {user.username}
-                              </span>
-                              <span className="font-mono text-xs">{user.progressPercent}%</span>
-                            </div>
-                            <Progress value={user.progressPercent} className="h-1.5" />
-                            <div className="flex justify-between text-[11px] text-muted-foreground">
-                              <span>Status: {user.status}</span>
-                              <span>
-                                Last played:{" "}
-                                {user.lastPlayedDate
-                                  ? new Date(user.lastPlayedDate).toLocaleDateString()
-                                  : "Never"}
-                              </span>
-                            </div>
-                          </Card>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center justify-between pt-4 border-t border-border">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={isPending}
-                        onClick={() => handleToggleWhitelist(selectedItem)}
-                      >
-                        {selectedItem.isWhitelisted ? "Remove Whitelist" : "Whitelist Media"}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        disabled={isPending}
-                        onClick={() => setDeleteCandidate(selectedItem)}
-                      >
-                        Purge Media
-                      </Button>
-                    </div>
-                  </div>
-                </>
-              )
-            })()}
-          </SheetContent>
-        )}
-      </Sheet>
-
-      {/* Confirmation Dialog for Purge */}
-      <Dialog
-        open={!!deleteCandidate}
-        onOpenChange={(open) => !open && setDeleteCandidate(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Media Purge</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to permanently delete{" "}
-              <span className="font-semibold text-foreground">
-                {deleteCandidate?.title}
-              </span>
-              ? This triggers immediate deletion in Radarr/Sonarr and purges local files.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-4 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDeleteCandidate(null)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              disabled={isPending}
-              onClick={confirmDelete}
-            >
-              Confirm Purge
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Shared Media Detail Sheet & Purge Dialog */}
+      <MediaDetailSheet
+        selectedItem={selectedItem}
+        onClose={() => setSelectedItem(null)}
+        onItemUpdated={(itemId, updates) => {
+          setData((prev) => prev.map((i) => (i.id === itemId ? { ...i, ...updates } : i)))
+          setSelectedItem((prev) => (prev && prev.id === itemId ? { ...prev, ...updates } : prev))
+        }}
+        onItemDeleted={({ item }) => {
+          setData((prev) => prev.filter((i) => i.id !== item.id))
+          setSelectedItem(null)
+        }}
+        deleteCandidate={deleteCandidate}
+        onDeleteCandidateChange={setDeleteCandidate}
+      />
     </div>
   )
 }

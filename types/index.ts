@@ -1,5 +1,5 @@
 export type MediaType = "movie" | "tv"
-export type ConflictStatus = "safe" | "conflict" | "ghost"
+export type ConflictStatus = "safe" | "conflict" | "ghost" | "new"
 export type WatchStatus = "unplayed" | "in_progress" | "completed"
 
 // --- Seerr API Types ---
@@ -17,8 +17,11 @@ export interface SeerrMediaInfo {
   id: number
   tmdbId: number
   tvdbId?: number
+  imdbId?: string
   status: number
   mediaType: MediaType
+  serviceUrl?: string
+  externalServiceSlug?: string
   createdAt: string
   updatedAt: string
 }
@@ -99,6 +102,10 @@ export interface JellyfinItem {
     MediaStreams?: {
       Type?: string
       DisplayTitle?: string
+      Width?: number
+      Height?: number
+      Codec?: string
+      VideoRange?: string
       [key: string]: any
     }[]
   }[]
@@ -113,6 +120,14 @@ export interface JellyfinItemsResponse {
 }
 
 // --- WatchedSeerr Domain Models ---
+export interface MediaExternalLinks {
+  imdb?: string
+  letterboxd?: string
+  arr?: string
+  jellyfin?: string
+  seerr?: string
+}
+
 export interface UserPlaybackState {
   userId: string
   username: string
@@ -157,6 +172,7 @@ export interface AuditMediaItem {
   id: string
   requestId: number
   tmdbId: number
+  imdbId?: string
   jellyfinItemId?: string
   title: string
   year?: number
@@ -165,8 +181,10 @@ export interface AuditMediaItem {
   overview?: string
   genres?: string[]
   quality?: string
+  qualityFull?: string
   jellyfinImageTag?: string
   sizeBytes?: number
+  externalLinks?: MediaExternalLinks
   requestedAt: string
   requester: {
     id: number
@@ -189,6 +207,7 @@ export interface AuditReport {
   generatedAt: string
   totalItems: number
   safeCount: number
+  newCount?: number
   conflictCount: number
   ghostCount: number
   whitelistedCount: number
