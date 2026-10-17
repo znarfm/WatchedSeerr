@@ -22,7 +22,6 @@ function setCache(key: string, entry: CacheEntry) {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const tmdbId = searchParams.get("tmdbId")
-  const mediaType = searchParams.get("mediaType")
   const jellyfinItemId = searchParams.get("jellyfinItemId")
   const posterPath = searchParams.get("posterPath")
   const w = Math.min(800, Math.max(64, Number(searchParams.get("w")) || 240))
@@ -82,7 +81,7 @@ export async function GET(request: Request) {
           headers: jfKey
             ? { Authorization: `MediaBrowser Token="${jfKey}"` }
             : {},
-          next: { revalidate: 86400 } as any,
+          next: { revalidate: 86400 },
         }
       )
       if (upstream.ok) {
@@ -113,7 +112,7 @@ export async function GET(request: Request) {
   if (posterPath) {
     try {
       const upstream = await fetch(`https://image.tmdb.org/t/p/w300${path}`, {
-        next: { revalidate: 86400 } as any,
+        next: { revalidate: 86400 },
       })
       if (upstream.ok) {
         const contentType = upstream.headers.get("content-type") || "image/jpeg"

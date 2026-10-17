@@ -10,8 +10,11 @@ export default async function Page() {
 
   try {
     report = await auditMedia()
-  } catch (err: any) {
-    errorMessage = err?.message || "Failed to connect to Jellyfin or Seerr API"
+  } catch (err: unknown) {
+    errorMessage =
+      err instanceof Error
+        ? err.message
+        : "Failed to connect to Jellyfin or Seerr API"
   }
 
   const disableDelete = isDeleteDisabled()

@@ -106,8 +106,17 @@ export interface JellyfinItem {
       Height?: number
       Codec?: string
       VideoRange?: string
-      [key: string]: any
+      [key: string]: unknown
     }[]
+  }[]
+  MediaStreams?: {
+    Type?: string
+    DisplayTitle?: string
+    Width?: number
+    Height?: number
+    Codec?: string
+    VideoRange?: string
+    [key: string]: unknown
   }[]
   Path?: string
   Size?: number

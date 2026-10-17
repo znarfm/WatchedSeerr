@@ -1,6 +1,7 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import { JellyfinClient } from "../lib/clients/jellyfin"
+import { SeerrClient } from "../lib/clients/seerr"
 
 describe("TV Sizes, Quality Normalization & New Status Seam", () => {
   it("JellyfinClient.getAllEpisodesMetadata queries /Items with episode parameters", async () => {
@@ -58,8 +59,7 @@ describe("TV Sizes, Quality Normalization & New Status Seam", () => {
   })
 
   it("buildMediaExternalLinks builds complete URLs for movies and tv", async () => {
-    // Dynamic import to test export
-    const { buildMediaExternalLinks } = (await import("../lib/audit")) as any
+    const { buildMediaExternalLinks } = await import("../lib/audit")
 
     const movieLinks = buildMediaExternalLinks({
       mediaType: "movie",
@@ -120,7 +120,7 @@ describe("TV Sizes, Quality Normalization & New Status Seam", () => {
   })
 
   it("normalizeVideoQuality normalizes structured streams and messy MKV track titles", async () => {
-    const { normalizeVideoQuality } = (await import("../lib/audit")) as any
+    const { normalizeVideoQuality } = await import("../lib/audit")
 
     // 1. Structured 1080p HEVC
     const q1 = normalizeVideoQuality({
@@ -262,14 +262,14 @@ describe("TV Sizes, Quality Normalization & New Status Seam", () => {
     const mockSeerrClient = {
       getRequests: async () => mockRequests,
       getMediaDetails: async () => ({ id: 1396, title: "Breaking Bad" }),
-    } as any
+    } as unknown as SeerrClient
 
     const mockJellyfinClient = {
       getUsers: async () => mockJellyfinUsers,
       getAllLibraryItems: async () => mockLibraryItems,
       getAllUserItems: async () => [],
       getAllEpisodesMetadata: async () => mockEpisodes,
-    } as any
+    } as unknown as JellyfinClient
 
     const report = await auditMedia({
       seerrClient: mockSeerrClient,
@@ -363,14 +363,14 @@ describe("TV Sizes, Quality Normalization & New Status Seam", () => {
         id,
         title: `Movie ${id}`,
       }),
-    } as any
+    } as unknown as SeerrClient
 
     const mockJellyfinClient = {
       getUsers: async () => mockJellyfinUsers,
       getAllLibraryItems: async () => mockLibraryItems,
       getAllUserItems: async () => [],
       getAllEpisodesMetadata: async () => [],
-    } as any
+    } as unknown as JellyfinClient
 
     const report = await auditMedia({
       seerrClient: mockSeerrClient,

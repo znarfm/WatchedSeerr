@@ -32,6 +32,7 @@ import {
 } from "@tabler/icons-react"
 
 declare module "@tanstack/react-table" {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface ColumnMeta<TData extends RowData, TValue> {
     className?: string
   }
@@ -71,11 +72,11 @@ export function sortInactiveDays(
   return valA - valB
 }
 
-function SortHeader({
+function SortHeader<TValue>({
   column,
   title,
 }: {
-  column: Column<AuditMediaItem, any>
+  column: Column<AuditMediaItem, TValue>
   title: string
 }) {
   const isSorted = column.getIsSorted()

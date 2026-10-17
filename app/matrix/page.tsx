@@ -16,8 +16,9 @@ export default async function MatrixPage() {
 
   try {
     report = await auditMedia()
-  } catch (err: any) {
-    errorMessage = err?.message || "Failed to load audit data"
+  } catch (err: unknown) {
+    errorMessage =
+      err instanceof Error ? err.message : "Failed to load audit data"
   }
 
   const disableDelete = isDeleteDisabled()

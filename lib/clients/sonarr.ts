@@ -68,8 +68,16 @@ export class SonarrClient {
       return undefined as T
     }
 
-    const text = await res.text()
-    return (text ? JSON.parse(text) : undefined) as T
+    if (typeof res.text === "function") {
+      const text = await res.text()
+      return (text ? JSON.parse(text) : undefined) as T
+    }
+
+    if (typeof res.json === "function") {
+      return res.json() as Promise<T>
+    }
+
+    return undefined as T
   }
 
   async getAllSeries(forceFresh = false): Promise<SonarrSeries[]> {

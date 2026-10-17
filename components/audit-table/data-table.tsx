@@ -119,15 +119,18 @@ interface DataTableProps {
   disableDelete?: boolean
 }
 
+function useSafeRouter():
+  { refresh: () => void } | ReturnType<typeof useRouter> {
+  try {
+    return useRouter()
+  } catch {
+    return { refresh: () => {} }
+  }
+}
+
 export function DataTable({ initialData, disableDelete }: DataTableProps) {
   const effectiveDisableDelete = disableDelete ?? isDeleteDisabled()
-  let router: any = null
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    router = useRouter()
-  } catch {
-    router = { refresh: () => {} }
-  }
+  const router = useSafeRouter()
 
   const [data, setData] = React.useState<AuditMediaItem[]>(initialData)
   React.useEffect(() => {
@@ -175,11 +178,13 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
             type: "info",
           })
         } catch {}
-      } catch (err: any) {
+      } catch (err: unknown) {
         try {
+          const msg =
+            err instanceof Error ? err.message : "Failed to refresh audit data"
           toast.add({
             title: "Refresh Failed",
-            description: err?.message || "Failed to refresh audit data",
+            description: msg,
             type: "error",
           })
         } catch {}
@@ -270,7 +275,7 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
       )
 
       if (res.success && res.episodes) {
-        const episodeSubRows: AuditMediaItem[] = res.episodes.map((ep: any) => {
+        const episodeSubRows: AuditMediaItem[] = res.episodes.map((ep) => {
           const sNum = String(ep.seasonNumber).padStart(2, "0")
           const eNum = String(ep.episodeNumber).padStart(2, "0")
           return {
@@ -750,7 +755,7 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className={(header.column.columnDef.meta as any)?.className}
+                    className={header.column.columnDef.meta?.className}
                   >
                     {header.isPlaceholder
                       ? null
@@ -770,7 +775,7 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
                   {table.getVisibleFlatColumns().map((col, colIdx) => (
                     <TableCell
                       key={col.id || colIdx}
-                      className={(col.columnDef.meta as any)?.className}
+                      className={col.columnDef.meta?.className}
                     >
                       {col.id === "select" ? (
                         <div className="flex size-full items-center justify-center p-2">
@@ -807,9 +812,7 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
-                        className={
-                          (cell.column.columnDef.meta as any)?.className
-                        }
+                        className={cell.column.columnDef.meta?.className}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
@@ -827,9 +830,7 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
                         {row.getVisibleCells().map((cell) => (
                           <TableCell
                             key={cell.id}
-                            className={
-                              (cell.column.columnDef.meta as any)?.className
-                            }
+                            className={cell.column.columnDef.meta?.className}
                           >
                             <Skeleton className="h-4 w-3/4" />
                           </TableCell>

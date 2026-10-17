@@ -76,7 +76,7 @@ export async function GET(request: Request) {
           headers: jfKey
             ? { Authorization: `MediaBrowser Token="${jfKey}"` }
             : {},
-          next: { revalidate: 86400 } as any,
+          next: { revalidate: 86400 },
         }
       )
       if (upstream.ok) {
@@ -114,7 +114,7 @@ export async function GET(request: Request) {
     try {
       const upstream = await fetch(avatarUrl, {
         headers: seerrKey ? { "X-Api-Key": seerrKey } : {},
-        next: { revalidate: 86400 } as any,
+        next: { revalidate: 86400 },
       })
       if (upstream.ok) {
         const contentType = upstream.headers.get("content-type") || "image/jpeg"

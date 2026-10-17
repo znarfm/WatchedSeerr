@@ -449,25 +449,26 @@ export function MediaDetailSheet({
           } catch {}
         } else {
           try {
-            const errVal = "error" in res ? (res as any).error : undefined
-            const description =
-              typeof errVal === "string"
-                ? errVal
-                : errVal
-                  ? JSON.stringify(errVal)
-                  : "Failed to update whitelist status"
+            const errVal =
+              "error" in res && res.error
+                ? typeof res.error === "string"
+                  ? res.error
+                  : JSON.stringify(res.error)
+                : "Failed to update whitelist status"
             toast.add({
               title: "Whitelist Update Failed",
-              description,
+              description: errVal,
               type: "error",
             })
           } catch {}
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         try {
+          const msg =
+            err instanceof Error ? err.message : "Unknown error occurred"
           toast.add({
             title: "Whitelist Update Failed",
-            description: err?.message || "Unknown error occurred",
+            description: msg,
             type: "error",
           })
         } catch {}
@@ -515,25 +516,26 @@ export function MediaDetailSheet({
           } catch {}
         } else {
           try {
-            const errVal = "error" in res ? (res as any).error : undefined
-            const description =
-              typeof errVal === "string"
-                ? errVal
-                : errVal
-                  ? JSON.stringify(errVal)
-                  : "Failed to purge media"
+            const errVal =
+              "error" in res && res.error
+                ? typeof res.error === "string"
+                  ? res.error
+                  : JSON.stringify(res.error)
+                : "Failed to purge media"
             toast.add({
               title: "Purge Failed",
-              description,
+              description: errVal,
               type: "error",
             })
           } catch {}
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         try {
+          const msg =
+            err instanceof Error ? err.message : "Unknown error occurred"
           toast.add({
             title: "Purge Failed",
-            description: err?.message || "Unknown error occurred",
+            description: msg,
             type: "error",
           })
         } catch {}

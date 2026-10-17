@@ -1,7 +1,7 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import { auditMedia } from "../lib/audit"
-import { deleteMediaAction, getSeriesEpisodesAction } from "../lib/actions"
+import { deleteMediaAction } from "../lib/actions"
 import type { SeerrClient } from "../lib/clients/seerr"
 import type { JellyfinClient } from "../lib/clients/jellyfin"
 import type { JellyfinItem, JellyfinUser, SeerrRequest } from "../types"
@@ -189,7 +189,10 @@ describe("Jellyfin Filter & TV Hierarchy Seam", () => {
       })
 
       assert.equal(res.success, false)
-      assert.equal((res as any).error, "Delete functionality is disabled")
+      assert.equal(
+        "error" in res ? res.error : undefined,
+        "Delete functionality is disabled"
+      )
     } finally {
       if (prevEnv !== undefined) {
         process.env.DISABLE_DELETE = prevEnv

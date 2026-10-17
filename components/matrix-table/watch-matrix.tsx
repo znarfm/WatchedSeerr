@@ -148,19 +148,25 @@ interface WatchMatrixProps {
   disableDelete?: boolean
 }
 
+function useSafeRouter():
+  { refresh: () => void } | ReturnType<typeof useRouter> {
+  try {
+    return useRouter()
+  } catch {
+    return { refresh: () => {} }
+  }
+}
+
 export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
   const effectiveDisableDelete = disableDelete ?? isDeleteDisabled()
-  let router: any = null
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    router = useRouter()
-  } catch {
-    router = { refresh: () => {} }
-  }
+  const router = useSafeRouter()
   const [data, setData] = React.useState<AuditMediaItem[]>(initialData)
-  React.useEffect(() => {
+  const [prevInitialData, setPrevInitialData] = React.useState(initialData)
+
+  if (initialData !== prevInitialData) {
+    setPrevInitialData(initialData)
     setData(initialData)
-  }, [initialData])
+  }
   const [search, setSearch] = React.useState("")
   const [mediaTypeFilter, setMediaTypeFilter] = React.useState<
     "all" | "movie" | "tv"
@@ -197,11 +203,13 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
             type: "info",
           })
         } catch {}
-      } catch (err: any) {
+      } catch (err: unknown) {
         try {
+          const msg =
+            err instanceof Error ? err.message : "Failed to refresh audit data"
           toast.add({
             title: "Refresh Failed",
-            description: err?.message || "Failed to refresh audit data",
+            description: msg,
             type: "error",
           })
         } catch {}
@@ -405,7 +413,7 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
             >
               <SelectTrigger className="h-8 min-w-36 bg-background text-xs">
                 <SelectValue placeholder="All Requesters">
-                  {(val: any) =>
+                  {(val: string | null) =>
                     val === "all" || !val ? "All Requesters" : val
                   }
                 </SelectValue>
@@ -432,7 +440,7 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
             >
               <SelectTrigger className="h-8 min-w-32 bg-background text-xs">
                 <SelectValue placeholder="All Statuses">
-                  {(val: any) =>
+                  {(val: string | null) =>
                     val === "all" || !val
                       ? "All Statuses"
                       : val === "safe"

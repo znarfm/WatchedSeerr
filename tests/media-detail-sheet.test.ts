@@ -3,11 +3,8 @@ import assert from "node:assert/strict"
 import React from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import {
-  MediaDetailSheet,
   MediaDetailSheetBody,
   resolveExternalLinks,
-  type DeleteTarget,
-  type MediaDetailSheetProps,
 } from "../components/media-detail-sheet"
 import { Sheet } from "../components/ui/sheet"
 import Loading from "../app/loading"

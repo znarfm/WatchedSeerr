@@ -1,12 +1,7 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import { auditMedia, invalidateAuditCache } from "../lib/audit"
-import {
-  getSeriesEpisodesAction,
-  refreshAuditAction,
-  toggleWhitelistAction,
-  deleteMediaAction,
-} from "../lib/actions"
+import { getSeriesEpisodesAction, refreshAuditAction } from "../lib/actions"
 import { SeerrClient } from "../lib/clients/seerr"
 import { JellyfinClient } from "../lib/clients/jellyfin"
 import type {
@@ -61,11 +56,11 @@ describe("User Reconciliation and Watch Status Seam", () => {
 
       assert.equal(
         capturedUrls[0],
-        "http://jellyfin.test/Items?Recursive=true&IncludeItemTypes=Movie,Series&Fields=ProviderIds,ProductionYear,RunTimeTicks,Path,Overview,Genres,MediaStreams,MediaSources,Size,ImageTags&EnableUserData=false&Limit=5000"
+        "http://jellyfin.test/Items?Recursive=true&IncludeItemTypes=Movie,Series&CollapseBoxSetItems=false&Fields=ProviderIds,ProductionYear,RunTimeTicks,Path,Overview,Genres,MediaStreams,MediaSources,Size,ImageTags&EnableUserData=false&StartIndex=0&Limit=2000"
       )
       assert.equal(
         capturedUrls[1],
-        "http://jellyfin.test/Users/user-xyz/Items?Recursive=true&IncludeItemTypes=Movie,Series&Fields=UserData&EnableImages=false&EnableTotalRecordCount=false&Limit=5000"
+        "http://jellyfin.test/Users/user-xyz/Items?Recursive=true&IncludeItemTypes=Movie,Series&CollapseBoxSetItems=false&Fields=UserData&EnableImages=false&StartIndex=0&Limit=2000"
       )
     } finally {
       globalThis.fetch = originalFetch
@@ -517,7 +512,7 @@ describe("User Reconciliation and Watch Status Seam", () => {
 
       // Invalidating cache forces fresh fetch
       invalidateAuditCache()
-      const report3 = await auditMedia()
+      await auditMedia()
       assert.equal(fetchCount, 2)
     } finally {
       invalidateAuditCache()

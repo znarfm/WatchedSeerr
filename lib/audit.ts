@@ -258,7 +258,14 @@ export async function auditMedia(
     if (typeof seerr.getAllRequests === "function") {
       return seerr.getAllRequests("all")
     }
-    const res = await (seerr as any).getRequests(200, "all")
+    const res = await (
+      seerr as unknown as {
+        getRequests: (
+          take: number,
+          filter: string
+        ) => Promise<SeerrRequest[] | { results?: SeerrRequest[] }>
+      }
+    ).getRequests(200, "all")
     return Array.isArray(res) ? res : res?.results || []
   }
 
@@ -267,11 +274,19 @@ export async function auditMedia(
       fetchRequests(),
       jellyfin.getUsers(),
       jellyfin.getAllLibraryItems().catch(() => [] as JellyfinItem[]),
-      typeof (seerr as any).getUsers === "function"
-        ? (seerr as any).getUsers().catch(() => [] as SeerrUser[])
+      typeof seerr.getUsers === "function"
+        ? seerr.getUsers().catch(() => [] as SeerrUser[])
         : Promise.resolve([] as SeerrUser[]),
-      typeof (jellyfin as any).getAllEpisodesMetadata === "function"
-        ? (jellyfin as any)
+      typeof (
+        jellyfin as unknown as {
+          getAllEpisodesMetadata?: () => Promise<JellyfinItem[]>
+        }
+      ).getAllEpisodesMetadata === "function"
+        ? (
+            jellyfin as unknown as {
+              getAllEpisodesMetadata: () => Promise<JellyfinItem[]>
+            }
+          )
             .getAllEpisodesMetadata()
             .catch(() => [] as JellyfinItem[])
         : Promise.resolve([] as JellyfinItem[]),
@@ -280,7 +295,15 @@ export async function auditMedia(
   // Build series episode stats for size and quality aggregation
   const seriesEpisodeStats = new Map<
     string,
-    { totalSize: number; videoStream?: any }
+    {
+      totalSize: number
+      videoStream?: {
+        Width?: number
+        Height?: number
+        Codec?: string
+        DisplayTitle?: string
+      }
+    }
   >()
   for (const ep of allEpisodes) {
     if (!ep.SeriesId) continue
@@ -289,7 +312,7 @@ export async function auditMedia(
     current.totalSize += epSize
     if (!current.videoStream) {
       current.videoStream = ep.MediaSources?.[0]?.MediaStreams?.find(
-        (s: any) => s.Type === "Video"
+        (s) => s.Type === "Video"
       )
     }
     seriesEpisodeStats.set(ep.SeriesId, current)
@@ -329,7 +352,7 @@ export async function auditMedia(
     const isEnrichmentTest =
       !jfItem.Genres?.length &&
       !jfItem.ImageTags?.Primary &&
-      typeof (seerr as any).getUsers !== "function"
+      typeof seerr.getUsers !== "function"
     if (jfItem.Name && !isEnrichmentTest) return false
     const key = `${r.media.mediaType || "movie"}-${r.media.tmdbId}`
     return !titleDetailsCache.has(key)
@@ -345,9 +368,8 @@ export async function auditMedia(
         const key = `${mediaType}-${tmdbId}`
         try {
           const details = await seerr.getMediaDetails(mediaType, tmdbId)
-          const title =
-            details.title || (details as any).name || `TMDB ${tmdbId}`
-          const yearStr = details.releaseDate || (details as any).firstAirDate
+          const title = details.title || details.name || `TMDB ${tmdbId}`
+          const yearStr = details.releaseDate || details.firstAirDate
           const year = yearStr ? new Date(yearStr).getFullYear() : undefined
           const genres = details.genres?.map((g) => g.name).filter(Boolean)
           titleDetailsCache.set(key, {

@@ -238,7 +238,15 @@ describe("Clickable Metric Cards & Table UX Seam", () => {
     assert.ok(reqCol, "Requester column found")
 
     // Alice has requesterAvatarUrl
-    const cellAlice: any = (reqCol.cell as any)({
+    const cellAlice = (
+      reqCol.cell as (props: {
+        row: { original: AuditMediaItem }
+      }) => React.ReactElement<{
+        children: React.ReactElement<{
+          children: (React.ReactElement<{ src?: string }> | undefined)[]
+        }>[]
+      }>
+    )({
       row: { original: mockItems[0] },
     })
     const aliceAvatarChildren = cellAlice.props.children[0].props.children
@@ -249,7 +257,15 @@ describe("Clickable Metric Cards & Table UX Seam", () => {
     )
 
     // Bob does NOT have requesterAvatarUrl
-    const cellBob: any = (reqCol.cell as any)({
+    const cellBob = (
+      reqCol.cell as (props: {
+        row: { original: AuditMediaItem }
+      }) => React.ReactElement<{
+        children: React.ReactElement<{
+          children: (React.ReactElement<{ src?: string }> | undefined)[]
+        }>[]
+      }>
+    )({
       row: { original: mockItems[1] },
     })
     const bobAvatarChildren = cellBob.props.children[0].props.children

@@ -24,7 +24,11 @@ export async function refreshAuditAction() {
   return { success: true }
 }
 
-export async function toggleWhitelistAction(input: unknown) {
+export async function toggleWhitelistAction(
+  input: unknown
+): Promise<
+  { success: true; isWhitelisted: boolean } | { success: false; error: unknown }
+> {
   const parsed = toggleWhitelistSchema.safeParse(input)
   if (!parsed.success) {
     return { success: false, error: parsed.error.format() }
@@ -105,9 +109,9 @@ export async function getSeriesEpisodesAction(
           status === "unplayed" ? undefined : userData?.LastPlayedDate,
         sizeBytes: ep.Size ?? ep.MediaSources?.[0]?.Size,
         ...normalizeVideoQuality(
-          (
-            (ep as any).MediaStreams ?? ep.MediaSources?.[0]?.MediaStreams
-          )?.find((s: any) => s.Type === "Video")
+          (ep.MediaStreams ?? ep.MediaSources?.[0]?.MediaStreams)?.find(
+            (s) => s.Type === "Video"
+          )
         ),
       }
     })
