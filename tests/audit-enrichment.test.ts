@@ -33,15 +33,16 @@ describe("Audit Enrichment Seam", () => {
         id: 550,
         title: "Fight Club",
         overview: "An insomniac office worker...",
-        genres: [{ id: 18, name: "Drama" }, { id: 53, name: "Thriller" }],
+        genres: [
+          { id: 18, name: "Drama" },
+          { id: 53, name: "Thriller" },
+        ],
         posterPath: "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",
       }),
     } as unknown as SeerrClient
 
     const mockJellyfin = {
-      getUsers: async () => [
-        { Id: "jf-u1", Name: "alice" },
-      ],
+      getUsers: async () => [{ Id: "jf-u1", Name: "alice" }],
       getAllLibraryItems: async () => [
         {
           Id: "jf-item-550",
@@ -53,11 +54,9 @@ describe("Audit Enrichment Seam", () => {
           Size: 15368709120, // ~14.3 GB
           MediaSources: [
             {
-              MediaStreams: [
-                { Type: "Video", DisplayTitle: "1080p HEVC" }
-              ]
-            }
-          ]
+              MediaStreams: [{ Type: "Video", DisplayTitle: "1080p HEVC" }],
+            },
+          ],
         },
       ],
       getAllUserItems: async () => [],

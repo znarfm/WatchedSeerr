@@ -121,7 +121,9 @@ async function runTestAudit() {
               PlayCount: 1,
               IsFavorite: false,
               Played: true,
-              LastPlayedDate: new Date(Date.now() - 35 * 86400000).toISOString(),
+              LastPlayedDate: new Date(
+                Date.now() - 35 * 86400000
+              ).toISOString(),
             },
           },
           {
@@ -149,7 +151,9 @@ async function runTestAudit() {
               PlayCount: 0,
               IsFavorite: false,
               Played: false,
-              LastPlayedDate: new Date(Date.now() - 10 * 86400000).toISOString(),
+              LastPlayedDate: new Date(
+                Date.now() - 10 * 86400000
+              ).toISOString(),
             },
           },
         ]
@@ -166,13 +170,21 @@ async function runTestAudit() {
   })
 
   console.log(`Generated: ${report.generatedAt}`)
-  console.log(`Summary: Total=${report.totalItems}, Safe=${report.safeCount}, Conflicts=${report.conflictCount}, Ghost=${report.ghostCount}\n`)
+  console.log(
+    `Summary: Total=${report.totalItems}, Safe=${report.safeCount}, Conflicts=${report.conflictCount}, Ghost=${report.ghostCount}\n`
+  )
 
   for (const item of report.items) {
-    console.log(`[${item.conflictStatus.toUpperCase()}] ${item.title} (${item.year || "N/A"}) - ${item.mediaType}`)
-    console.log(`  Requester: ${item.requester.username} (Status: ${item.requesterState.status}, Progress: ${item.requesterState.progressPercent}%)`)
+    console.log(
+      `[${item.conflictStatus.toUpperCase()}] ${item.title} (${item.year || "N/A"}) - ${item.mediaType}`
+    )
+    console.log(
+      `  Requester: ${item.requester.username} (Status: ${item.requesterState.status}, Progress: ${item.requesterState.progressPercent}%)`
+    )
     console.log(`  Conflict reason: ${item.conflictReason}`)
-    console.log(`  Household: ${item.householdStates.map(h => `${h.username}: ${h.status}`).join(", ") || "None"}`)
+    console.log(
+      `  Household: ${item.householdStates.map((h) => `${h.username}: ${h.status}`).join(", ") || "None"}`
+    )
     console.log("--------------------------------------------------")
   }
 }

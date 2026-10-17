@@ -23,7 +23,10 @@ export class RadarrClient {
     return !!(this.baseUrl && this.apiKey)
   }
 
-  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  private async request<T>(
+    endpoint: string,
+    options?: RequestInit
+  ): Promise<T> {
     if (!this.baseUrl || !this.apiKey) {
       throw new Error("Radarr URL or API Key is missing")
     }

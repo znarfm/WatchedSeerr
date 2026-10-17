@@ -30,7 +30,10 @@ export async function GET(request: Request) {
 
   if (!jellyfinItemId && !posterPath && !tmdbId) {
     return Response.json(
-      { error: "Missing required parameter: jellyfinItemId, posterPath, or tmdbId" },
+      {
+        error:
+          "Missing required parameter: jellyfinItemId, posterPath, or tmdbId",
+      },
       { status: 400 }
     )
   }
@@ -76,7 +79,9 @@ export async function GET(request: Request) {
       const upstream = await fetch(
         `${jfUrl}/Items/${jellyfinItemId}/Images/Primary?maxWidth=${w}&quality=80${tag ? `&tag=${encodeURIComponent(tag)}` : ""}`,
         {
-          headers: jfKey ? { Authorization: `MediaBrowser Token="${jfKey}"` } : {},
+          headers: jfKey
+            ? { Authorization: `MediaBrowser Token="${jfKey}"` }
+            : {},
           next: { revalidate: 86400 } as any,
         }
       )

@@ -61,7 +61,9 @@ export async function GET(request: Request) {
     }
   }
 
-  const cacheHeader = tag ? "public, max-age=31536000, immutable" : "public, max-age=86400"
+  const cacheHeader = tag
+    ? "public, max-age=31536000, immutable"
+    : "public, max-age=86400"
 
   // 1. Jellyfin avatar proxy
   if (userId && process.env.JELLYFIN_URL) {
@@ -71,7 +73,9 @@ export async function GET(request: Request) {
       const upstream = await fetch(
         `${jfUrl}/Users/${userId}/Images/Primary?maxWidth=96&quality=80${tag ? `&tag=${encodeURIComponent(tag)}` : ""}`,
         {
-          headers: jfKey ? { Authorization: `MediaBrowser Token="${jfKey}"` } : {},
+          headers: jfKey
+            ? { Authorization: `MediaBrowser Token="${jfKey}"` }
+            : {},
           next: { revalidate: 86400 } as any,
         }
       )

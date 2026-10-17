@@ -30,7 +30,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { MediaDetailSheet, type DeleteTarget } from "@/components/media-detail-sheet"
+import {
+  MediaDetailSheet,
+  type DeleteTarget,
+} from "@/components/media-detail-sheet"
 import {
   IconSearch,
   IconArrowUp,
@@ -63,8 +66,14 @@ export interface MatrixUserColumn {
 export function deriveMatrixUsers(items: AuditMediaItem[]): MatrixUserColumn[] {
   const map = new Map<string, MatrixUserColumn>()
 
-  const ensureUser = (userId: string | undefined, username: string, avatarUrl?: string) => {
-    const key = (userId && userId !== "unknown" ? userId : username).toLowerCase()
+  const ensureUser = (
+    userId: string | undefined,
+    username: string,
+    avatarUrl?: string
+  ) => {
+    const key = (
+      userId && userId !== "unknown" ? userId : username
+    ).toLowerCase()
     let entry = map.get(key)
     if (!entry) {
       entry = {
@@ -101,14 +110,20 @@ export function deriveMatrixUsers(items: AuditMediaItem[]): MatrixUserColumn[] {
     }
   }
 
-  return Array.from(map.values()).sort((a, b) => a.username.localeCompare(b.username))
+  return Array.from(map.values()).sort((a, b) =>
+    a.username.localeCompare(b.username)
+  )
 }
 
 export function getUserCellState(
   item: AuditMediaItem,
   col: MatrixUserColumn
 ): { state?: UserPlaybackState; isRequester: boolean } {
-  const reqId = (item.requester.matchedJellyfinUserId || item.requesterState.userId || "").toLowerCase()
+  const reqId = (
+    item.requester.matchedJellyfinUserId ||
+    item.requesterState.userId ||
+    ""
+  ).toLowerCase()
   const isRequester =
     (!!col.userId && reqId === col.userId.toLowerCase()) ||
     item.requester.username.toLowerCase() === col.username.toLowerCase()
@@ -119,7 +134,9 @@ export function getUserCellState(
 
   const state = item.householdStates.find(
     (h) =>
-      (!!col.userId && !!h.userId && h.userId.toLowerCase() === col.userId.toLowerCase()) ||
+      (!!col.userId &&
+        !!h.userId &&
+        h.userId.toLowerCase() === col.userId.toLowerCase()) ||
       h.username.toLowerCase() === col.username.toLowerCase()
   )
   return { state, isRequester: false }
@@ -142,15 +159,24 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
     setData(initialData)
   }, [initialData])
   const [search, setSearch] = React.useState("")
-  const [mediaTypeFilter, setMediaTypeFilter] = React.useState<"all" | "movie" | "tv">("all")
+  const [mediaTypeFilter, setMediaTypeFilter] = React.useState<
+    "all" | "movie" | "tv"
+  >("all")
   const [requesterFilter, setRequesterFilter] = React.useState("all")
-  const [statusFilter, setStatusFilter] = React.useState<"all" | ConflictStatus>("all")
-  const [sortField, setSortField] = React.useState<"default" | "title" | string>("default")
+  const [statusFilter, setStatusFilter] = React.useState<
+    "all" | ConflictStatus
+  >("all")
+  const [sortField, setSortField] = React.useState<
+    "default" | "title" | string
+  >("default")
   const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc")
   const [pageIndex, setPageIndex] = React.useState(0)
   const [pageSize, setPageSize] = React.useState(25)
-  const [selectedItem, setSelectedItem] = React.useState<AuditMediaItem | null>(null)
-  const [deleteCandidate, setDeleteCandidate] = React.useState<DeleteTarget | null>(null)
+  const [selectedItem, setSelectedItem] = React.useState<AuditMediaItem | null>(
+    null
+  )
+  const [deleteCandidate, setDeleteCandidate] =
+    React.useState<DeleteTarget | null>(null)
   const [isPending, startTransition] = React.useTransition()
   const [isRefreshing, setIsRefreshing] = React.useState(false)
   const searchInputRef = React.useRef<HTMLInputElement>(null)
@@ -261,10 +287,22 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
     }
 
     return result
-  }, [data, search, mediaTypeFilter, requesterFilter, statusFilter, sortField, sortDir, userColumns])
+  }, [
+    data,
+    search,
+    mediaTypeFilter,
+    requesterFilter,
+    statusFilter,
+    sortField,
+    sortDir,
+    userColumns,
+  ])
 
   // Pagination calculation
-  const pageCount = Math.max(1, Math.ceil(filteredAndSortedItems.length / pageSize))
+  const pageCount = Math.max(
+    1,
+    Math.ceil(filteredAndSortedItems.length / pageSize)
+  )
   const clampedPageIndex = Math.min(pageIndex, pageCount - 1)
   const paginatedItems = filteredAndSortedItems.slice(
     clampedPageIndex * pageSize,
@@ -295,8 +333,8 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
   return (
     <div className="space-y-4">
       {/* Toolbar Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/20 p-3 border border-border">
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+      <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-muted/20 p-3">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
           {/* Title search */}
           <div className="relative w-full sm:w-64">
             <Input
@@ -315,16 +353,16 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
                   e.currentTarget.blur()
                 }
               }}
-              className="h-8 pl-8 pr-16 text-xs bg-background"
+              className="h-8 bg-background pr-16 pl-8 text-xs"
             />
-            <IconSearch className="pointer-events-none absolute left-2.5 top-2 size-4 text-muted-foreground" />
-            <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+            <IconSearch className="pointer-events-none absolute top-2 left-2.5 size-4 text-muted-foreground" />
+            <div className="pointer-events-none absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-0.5">
               {search ? (
-                <Kbd className="text-[10px] h-4 px-1">Esc</Kbd>
+                <Kbd className="h-4 px-1 text-[10px]">Esc</Kbd>
               ) : (
                 <KbdGroup>
-                  <Kbd className="text-[10px] h-4 px-1">Ctrl</Kbd>
-                  <Kbd className="text-[10px] h-4 px-1">K</Kbd>
+                  <Kbd className="h-4 px-1 text-[10px]">Ctrl</Kbd>
+                  <Kbd className="h-4 px-1 text-[10px]">K</Kbd>
                 </KbdGroup>
               )}
             </div>
@@ -339,13 +377,19 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
             }}
           >
             <TabsList>
-              <TabsTrigger value="all" className="uppercase text-[11px]">All</TabsTrigger>
-              <TabsTrigger value="movie" className="uppercase text-[11px]">Movie</TabsTrigger>
-              <TabsTrigger value="tv" className="uppercase text-[11px]">TV</TabsTrigger>
+              <TabsTrigger value="all" className="text-[11px] uppercase">
+                All
+              </TabsTrigger>
+              <TabsTrigger value="movie" className="text-[11px] uppercase">
+                Movie
+              </TabsTrigger>
+              <TabsTrigger value="tv" className="text-[11px] uppercase">
+                TV
+              </TabsTrigger>
             </TabsList>
           </Tabs>
 
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
+          <div className="grid w-full grid-cols-2 items-center gap-2 sm:flex sm:w-auto sm:flex-wrap">
             {/* Requester Filter */}
             <Select
               value={requesterFilter}
@@ -356,9 +400,11 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
                 }
               }}
             >
-              <SelectTrigger className="h-8 min-w-36 text-xs bg-background">
+              <SelectTrigger className="h-8 min-w-36 bg-background text-xs">
                 <SelectValue placeholder="All Requesters">
-                  {(val: any) => (val === "all" || !val ? "All Requesters" : val)}
+                  {(val: any) =>
+                    val === "all" || !val ? "All Requesters" : val
+                  }
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -381,18 +427,18 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
                 }
               }}
             >
-              <SelectTrigger className="h-8 min-w-32 text-xs bg-background">
+              <SelectTrigger className="h-8 min-w-32 bg-background text-xs">
                 <SelectValue placeholder="All Statuses">
                   {(val: any) =>
                     val === "all" || !val
                       ? "All Statuses"
                       : val === "safe"
-                      ? "Safe"
-                      : val === "new"
-                      ? "New"
-                      : val === "conflict"
-                      ? "Conflict"
-                      : "Ghost"
+                        ? "Safe"
+                        : val === "new"
+                          ? "New"
+                          : val === "conflict"
+                            ? "Conflict"
+                            : "Ghost"
                   }
                 </SelectValue>
               </SelectTrigger>
@@ -413,7 +459,7 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
                 onClick={handleReset}
                 className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
               >
-                <IconRefresh className="size-3.5 mr-1" />
+                <IconRefresh className="mr-1 size-3.5" />
                 Reset
               </Button>
             )}
@@ -422,7 +468,7 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
 
         {/* Total Count and Refresh */}
         <div className="flex items-center gap-2">
-          <div className="text-xs text-muted-foreground font-mono mr-1">
+          <div className="mr-1 font-mono text-xs text-muted-foreground">
             {filteredAndSortedItems.length} media items
           </div>
           <Tooltip>
@@ -435,7 +481,12 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
                   disabled={isPending || isRefreshing}
                   onClick={handleRefresh}
                 >
-                  <IconRefresh className={cn("size-3.5 mr-1", isRefreshing && "animate-spin")} />
+                  <IconRefresh
+                    className={cn(
+                      "mr-1 size-3.5",
+                      isRefreshing && "animate-spin"
+                    )}
+                  />
                   Refresh
                 </Button>
               }
@@ -443,8 +494,8 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
             <TooltipContent className="flex items-center gap-1.5">
               <span>Refresh audit data</span>
               <KbdGroup>
-                <Kbd className="text-[10px] h-4 px-1">Alt</Kbd>
-                <Kbd className="text-[10px] h-4 px-1">R</Kbd>
+                <Kbd className="h-4 px-1 text-[10px]">Alt</Kbd>
+                <Kbd className="h-4 px-1 text-[10px]">R</Kbd>
               </KbdGroup>
             </TooltipContent>
           </Tooltip>
@@ -452,25 +503,25 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
       </div>
 
       {/* 2D Matrix Table */}
-      <div className="border border-border overflow-x-auto">
+      <div className="overflow-x-auto border border-border">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
               {/* Sticky Left Requested Media Column */}
               <TableHead
                 onClick={handleTitleHeaderClick}
-                className="sticky left-0 z-10 bg-background border-r border-border min-w-[260px] p-3 uppercase text-muted-foreground cursor-pointer hover:bg-muted/60 select-none"
+                className="sticky left-0 z-10 min-w-[260px] cursor-pointer border-r border-border bg-background p-3 text-muted-foreground uppercase select-none hover:bg-muted/60"
               >
                 <div className="flex items-center justify-between gap-1.5">
                   <span>Requested Media</span>
                   {sortField === "title" ? (
                     sortDir === "asc" ? (
-                      <IconArrowUp className="size-3.5 text-primary shrink-0" />
+                      <IconArrowUp className="size-3.5 shrink-0 text-primary" />
                     ) : (
-                      <IconArrowDown className="size-3.5 text-primary shrink-0" />
+                      <IconArrowDown className="size-3.5 shrink-0 text-primary" />
                     )
                   ) : (
-                    <IconArrowsSort className="size-3.5 opacity-40 shrink-0" />
+                    <IconArrowsSort className="size-3.5 shrink-0 opacity-40" />
                   )}
                 </div>
               </TableHead>
@@ -480,30 +531,32 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
                 <TableHead
                   key={col.key}
                   onClick={() => handleUserHeaderClick(col.key)}
-                  className="p-3 uppercase text-muted-foreground text-center min-w-[120px] border-l border-border/50 cursor-pointer hover:bg-muted/60 select-none"
+                  className="min-w-[120px] cursor-pointer border-l border-border/50 p-3 text-center text-muted-foreground uppercase select-none hover:bg-muted/60"
                 >
                   <div className="flex flex-col items-center justify-center gap-1.5">
                     <Avatar className="size-6 shrink-0">
                       {col.avatarUrl && (
                         <AvatarImage src={col.avatarUrl} alt={col.username} />
                       )}
-                      <AvatarFallback className="text-[10px] uppercase font-mono">
+                      <AvatarFallback className="font-mono text-[10px] uppercase">
                         {col.username.slice(0, 2)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex items-center gap-1">
-                      <span className="truncate max-w-[90px]">{col.username}</span>
+                      <span className="max-w-[90px] truncate">
+                        {col.username}
+                      </span>
                       {sortField === col.key ? (
                         sortDir === "desc" ? (
-                          <IconArrowDown className="size-3 text-primary shrink-0" />
+                          <IconArrowDown className="size-3 shrink-0 text-primary" />
                         ) : (
-                          <IconArrowUp className="size-3 text-primary shrink-0" />
+                          <IconArrowUp className="size-3 shrink-0 text-primary" />
                         )
                       ) : (
-                        <IconArrowsSort className="size-3 opacity-40 shrink-0" />
+                        <IconArrowsSort className="size-3 shrink-0 opacity-40" />
                       )}
                     </div>
-                    <span className="text-[10px] font-mono lowercase opacity-75">
+                    <span className="font-mono text-[10px] lowercase opacity-75">
                       {col.requestedCount} req • {col.watchedCount} watched
                     </span>
                   </div>
@@ -516,17 +569,20 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
             {isRefreshing ? (
               Array.from({ length: 8 }).map((_, idx) => (
                 <TableRow key={`refresh-skeleton-${idx}`}>
-                  <TableCell className="sticky left-0 z-10 bg-background border-r border-border p-3">
+                  <TableCell className="sticky left-0 z-10 border-r border-border bg-background p-3">
                     <div className="flex items-center gap-2.5">
-                      <Skeleton className="size-9 rounded shrink-0" />
-                      <div className="space-y-1.5 flex-1 min-w-0">
+                      <Skeleton className="size-9 shrink-0 rounded" />
+                      <div className="min-w-0 flex-1 space-y-1.5">
                         <Skeleton className="h-3.5 w-3/4" />
                         <Skeleton className="h-2.5 w-1/2" />
                       </div>
                     </div>
                   </TableCell>
                   {userColumns.map((col) => (
-                    <TableCell key={col.key} className="p-2.5 text-center border-l border-border/50">
+                    <TableCell
+                      key={col.key}
+                      className="border-l border-border/50 p-2.5 text-center"
+                    >
                       <Skeleton className="h-8 w-full" />
                     </TableCell>
                   ))}
@@ -536,7 +592,7 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
               <TableRow>
                 <TableCell
                   colSpan={1 + userColumns.length}
-                  className="text-center py-8 text-muted-foreground"
+                  className="py-8 text-center text-muted-foreground"
                 >
                   No matching media items found.
                 </TableCell>
@@ -545,28 +601,30 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
               paginatedItems.map((item) => {
                 const posterSrc = item.jellyfinItemId
                   ? `/api/proxy/poster?jellyfinItemId=${item.jellyfinItemId}${
-                      item.jellyfinImageTag ? `&tag=${encodeURIComponent(item.jellyfinImageTag)}` : ""
+                      item.jellyfinImageTag
+                        ? `&tag=${encodeURIComponent(item.jellyfinImageTag)}`
+                        : ""
                     }`
                   : undefined
 
                 return (
                   <TableRow
                     key={item.id}
-                    className="hover:bg-muted/30 cursor-pointer"
+                    className="cursor-pointer hover:bg-muted/30"
                     onClick={() => setSelectedItem(item)}
                   >
                     {/* Sticky Requested Media Cell */}
-                    <TableCell className="sticky left-0 z-10 bg-background border-r border-border min-w-[260px] p-3 font-medium">
+                    <TableCell className="sticky left-0 z-10 min-w-[260px] border-r border-border bg-background p-3 font-medium">
                       <div className="flex items-center gap-2.5">
                         {posterSrc ? (
                           <img
                             src={posterSrc}
                             alt={item.title}
                             loading="lazy"
-                            className="size-9 rounded object-cover bg-muted shrink-0"
+                            className="size-9 shrink-0 rounded bg-muted object-cover"
                           />
                         ) : (
-                          <div className="size-9 rounded bg-muted/60 border border-border flex items-center justify-center shrink-0 text-muted-foreground">
+                          <div className="flex size-9 shrink-0 items-center justify-center rounded border border-border bg-muted/60 text-muted-foreground">
                             {item.mediaType === "movie" ? (
                               <IconMovie className="size-5" />
                             ) : (
@@ -575,47 +633,52 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="truncate max-w-[180px] text-xs font-semibold" title={item.title}>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span
+                              className="max-w-[180px] truncate text-xs font-semibold"
+                              title={item.title}
+                            >
                               {item.title}
                             </span>
                             {item.year && (
-                              <span className="text-[11px] text-muted-foreground">({item.year})</span>
+                              <span className="text-[11px] text-muted-foreground">
+                                ({item.year})
+                              </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-muted-foreground uppercase flex-wrap">
+                          <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground uppercase">
                             <span>{item.mediaType}</span>
                             <span>•</span>
                             <span>Req: {item.requester.username}</span>
                           </div>
-                          <div className="flex items-center gap-1 mt-1 flex-wrap">
+                          <div className="mt-1 flex flex-wrap items-center gap-1">
                             {item.isWhitelisted && (
                               <Badge
                                 variant="outline"
-                                className="text-[9px] px-1 py-0 border-primary/50 text-primary"
+                                className="border-primary/50 px-1 py-0 text-[9px] text-primary"
                               >
                                 Whitelisted
                               </Badge>
                             )}
                             <Badge
                               variant="outline"
-                              className={`text-[9px] px-1 py-0 uppercase ${
+                              className={`px-1 py-0 text-[9px] uppercase ${
                                 item.conflictStatus === "safe"
-                                  ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/10"
+                                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
                                   : item.conflictStatus === "new"
-                                  ? "border-sky-500/40 text-sky-400 bg-sky-500/10"
-                                  : item.conflictStatus === "conflict"
-                                  ? "border-amber-500/40 text-amber-400 bg-amber-500/10"
-                                  : "border-rose-500/40 text-rose-400 bg-rose-500/10"
+                                    ? "border-sky-500/40 bg-sky-500/10 text-sky-400"
+                                    : item.conflictStatus === "conflict"
+                                      ? "border-amber-500/40 bg-amber-500/10 text-amber-400"
+                                      : "border-rose-500/40 bg-rose-500/10 text-rose-400"
                               }`}
                             >
                               {item.conflictStatus === "safe"
                                 ? "Safe"
                                 : item.conflictStatus === "new"
-                                ? "New"
-                                : item.conflictStatus === "conflict"
-                                ? "Conflict"
-                                : "Ghost"}
+                                  ? "New"
+                                  : item.conflictStatus === "conflict"
+                                    ? "Conflict"
+                                    : "Ghost"}
                             </Badge>
                           </div>
                         </div>
@@ -635,38 +698,41 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
                       return (
                         <TableCell
                           key={col.key}
-                          className={`p-2.5 text-center border-l border-border/50 ${
+                          className={`border-l border-border/50 p-2.5 text-center ${
                             isRequester ? "bg-primary/5" : ""
                           }`}
                         >
                           <Tooltip>
                             <TooltipTrigger
-                              className={`inline-flex flex-col items-center justify-center p-1 w-full border text-[11px] select-none ${
+                              className={`inline-flex w-full flex-col items-center justify-center border p-1 text-[11px] select-none ${
                                 status === "completed"
-                                  ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-semibold"
+                                  ? "border-emerald-500/40 bg-emerald-500/10 font-semibold text-emerald-400"
                                   : status === "in_progress"
-                                  ? "bg-amber-500/10 border-amber-500/40 text-amber-400 font-semibold"
-                                  : "bg-muted/10 border-border text-muted-foreground"
+                                    ? "border-amber-500/40 bg-amber-500/10 font-semibold text-amber-400"
+                                    : "border-border bg-muted/10 text-muted-foreground"
                               } ${isRequester ? "ring-1 ring-primary/60" : ""}`}
                             >
                               <div className="flex items-center gap-1">
                                 <span>{progress}%</span>
                                 {isRequester && (
-                                  <span className="text-[8px] bg-primary text-primary-foreground font-bold px-1 rounded">
+                                  <span className="rounded bg-primary px-1 text-[8px] font-bold text-primary-foreground">
                                     REQ
                                   </span>
                                 )}
                               </div>
-                              <span className="text-[9px] uppercase tracking-tighter opacity-70">
+                              <span className="text-[9px] tracking-tighter uppercase opacity-70">
                                 {status === "in_progress" ? "in-prog" : status}
                               </span>
                             </TooltipTrigger>
                             <TooltipContent className="text-xs">
                               <div className="font-semibold">
-                                {col.username} {isRequester ? "(Requester)" : ""}
+                                {col.username}{" "}
+                                {isRequester ? "(Requester)" : ""}
                               </div>
                               <div>
-                                Status: {status === "in_progress" ? "in-prog" : status} ({progress}%)
+                                Status:{" "}
+                                {status === "in_progress" ? "in-prog" : status}{" "}
+                                ({progress}%)
                               </div>
                               <div>Last played: {lastPlayed}</div>
                               <div>Play count: {playCount}</div>
@@ -684,9 +750,10 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
       </div>
 
       {/* Pagination Footer */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground px-1 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1 py-2 text-xs text-muted-foreground">
         <div className="font-mono">
-          Page {clampedPageIndex + 1} of {pageCount} ({filteredAndSortedItems.length} items)
+          Page {clampedPageIndex + 1} of {pageCount} (
+          {filteredAndSortedItems.length} items)
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
@@ -700,7 +767,10 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
                 }
               }}
             >
-              <SelectTrigger size="sm" className="h-7 w-16 text-xs bg-background">
+              <SelectTrigger
+                size="sm"
+                className="h-7 w-16 bg-background text-xs"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -718,15 +788,17 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
               onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
               disabled={clampedPageIndex === 0}
             >
-              <IconChevronLeft className="size-3 mr-0.5" /> Previous
+              <IconChevronLeft className="mr-0.5 size-3" /> Previous
             </Button>
             <Button
               variant="outline"
               size="xs"
-              onClick={() => setPageIndex((p) => Math.min(pageCount - 1, p + 1))}
+              onClick={() =>
+                setPageIndex((p) => Math.min(pageCount - 1, p + 1))
+              }
               disabled={clampedPageIndex >= pageCount - 1}
             >
-              Next <IconChevronRight className="size-3 ml-0.5" />
+              Next <IconChevronRight className="ml-0.5 size-3" />
             </Button>
           </div>
         </div>
@@ -737,8 +809,12 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
         selectedItem={selectedItem}
         onClose={() => setSelectedItem(null)}
         onItemUpdated={(itemId, updates) => {
-          setData((prev) => prev.map((i) => (i.id === itemId ? { ...i, ...updates } : i)))
-          setSelectedItem((prev) => (prev && prev.id === itemId ? { ...prev, ...updates } : prev))
+          setData((prev) =>
+            prev.map((i) => (i.id === itemId ? { ...i, ...updates } : i))
+          )
+          setSelectedItem((prev) =>
+            prev && prev.id === itemId ? { ...prev, ...updates } : prev
+          )
         }}
         onItemDeleted={({ item }) => {
           setData((prev) => prev.filter((i) => i.id !== item.id))

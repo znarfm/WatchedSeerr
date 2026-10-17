@@ -1,7 +1,11 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import type { AuditMediaItem } from "../types"
-import { deriveMatrixUsers, getUserCellState, isSearchShortcut } from "../components/matrix-table/watch-matrix"
+import {
+  deriveMatrixUsers,
+  getUserCellState,
+  isSearchShortcut,
+} from "../components/matrix-table/watch-matrix"
 
 describe("Watch Matrix Unit Seams", () => {
   it("re-exports and validates isSearchShortcut helper", () => {
@@ -178,7 +182,8 @@ describe("Watch Matrix Unit Seams", () => {
     const React = await import("react")
     const { renderToStaticMarkup } = await import("react-dom/server")
     const { TooltipProvider } = await import("../components/ui/tooltip")
-    const { WatchMatrix } = await import("../components/matrix-table/watch-matrix")
+    const { WatchMatrix } =
+      await import("../components/matrix-table/watch-matrix")
 
     const mockItems: AuditMediaItem[] = [
       {
@@ -259,7 +264,14 @@ describe("Watch Matrix Unit Seams", () => {
     )
 
     // Poster thumbnail with proxy URL
-    assert.ok(html.includes("/api/proxy/poster?jellyfinItemId=jf-item-101&amp;tag=tag-101") || html.includes("/api/proxy/poster?jellyfinItemId=jf-item-101&tag=tag-101"))
+    assert.ok(
+      html.includes(
+        "/api/proxy/poster?jellyfinItemId=jf-item-101&amp;tag=tag-101"
+      ) ||
+        html.includes(
+          "/api/proxy/poster?jellyfinItemId=jf-item-101&tag=tag-101"
+        )
+    )
     // Media details
     assert.ok(html.includes("Inception"))
     assert.ok(html.includes("2010"))
@@ -268,8 +280,14 @@ describe("Watch Matrix Unit Seams", () => {
     assert.ok(html.includes("Fresh Show"))
     assert.ok(html.includes("Req: Alice"))
     // Status 'new' badge
-    assert.ok(html.includes("border-sky-500/40"), "Status badge contains border-sky-500/40")
-    assert.ok(html.includes("text-sky-400"), "Status badge contains text-sky-400")
+    assert.ok(
+      html.includes("border-sky-500/40"),
+      "Status badge contains border-sky-500/40"
+    )
+    assert.ok(
+      html.includes("text-sky-400"),
+      "Status badge contains text-sky-400"
+    )
     assert.ok(html.includes("New"), "Status cell renders 'New' badge text")
     // User column stats
     assert.ok(html.includes("1 req • 1 watched"))
@@ -278,7 +296,10 @@ describe("Watch Matrix Unit Seams", () => {
     // Keyboard shortcut hints rendered
     assert.ok(html.includes("Ctrl"), "Search bar contains Ctrl Kbd")
     assert.ok(html.includes("K"), "Search bar contains K Kbd")
-    assert.ok(html.includes('data-slot="kbd"'), "Search bar renders Kbd shortcut")
+    assert.ok(
+      html.includes('data-slot="kbd"'),
+      "Search bar renders Kbd shortcut"
+    )
     assert.ok(html.includes("Refresh"), "Toolbar contains Refresh button")
     // Pagination footer
     assert.ok(html.includes("Page 1 of 1"))

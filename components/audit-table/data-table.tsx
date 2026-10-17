@@ -131,7 +131,9 @@ export function DataTable({ initialData }: DataTableProps) {
     setData(initialData)
   }, [initialData])
   const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  )
   const [globalFilter, setGlobalFilter] = React.useState("")
   const [rowSelection, setRowSelection] = React.useState({})
   const [expanded, setExpanded] = React.useState<ExpandedState>({})
@@ -139,13 +141,19 @@ export function DataTable({ initialData }: DataTableProps) {
     pageIndex: 0,
     pageSize: 25,
   })
-  const [loadingEpisodes, setLoadingEpisodes] = React.useState<Record<string, boolean>>({})
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
-    mediaType: false,
-    whitelisted: false,
-  })
-  const [selectedItem, setSelectedItem] = React.useState<AuditMediaItem | null>(null)
-  const [deleteCandidate, setDeleteCandidate] = React.useState<DeleteTarget | null>(null)
+  const [loadingEpisodes, setLoadingEpisodes] = React.useState<
+    Record<string, boolean>
+  >({})
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({
+      mediaType: false,
+      whitelisted: false,
+    })
+  const [selectedItem, setSelectedItem] = React.useState<AuditMediaItem | null>(
+    null
+  )
+  const [deleteCandidate, setDeleteCandidate] =
+    React.useState<DeleteTarget | null>(null)
   const [isPending, startTransition] = React.useTransition()
 
   const [isRefreshing, setIsRefreshing] = React.useState(false)
@@ -183,8 +191,8 @@ export function DataTable({ initialData }: DataTableProps) {
   const metricCounts = React.useMemo(() => computeMetricCounts(data), [data])
 
   const uniqueRequesters = React.useMemo(() => {
-    return Array.from(new Set(data.map((d) => d.requester.username))).sort((a, b) =>
-      a.localeCompare(b)
+    return Array.from(new Set(data.map((d) => d.requester.username))).sort(
+      (a, b) => a.localeCompare(b)
     )
   }, [data])
 
@@ -199,17 +207,23 @@ export function DataTable({ initialData }: DataTableProps) {
       if (res.success) {
         setData((prev) =>
           prev.map((i) =>
-            i.id === item.id ? { ...i, isWhitelisted: res.isWhitelisted as boolean } : i
+            i.id === item.id
+              ? { ...i, isWhitelisted: res.isWhitelisted as boolean }
+              : i
           )
         )
         if (selectedItem?.id === item.id) {
           setSelectedItem((prev) =>
-            prev ? { ...prev, isWhitelisted: res.isWhitelisted as boolean } : prev
+            prev
+              ? { ...prev, isWhitelisted: res.isWhitelisted as boolean }
+              : prev
           )
         }
         try {
           toast.add({
-            title: res.isWhitelisted ? "Media Whitelisted" : "Removed from Whitelist",
+            title: res.isWhitelisted
+              ? "Media Whitelisted"
+              : "Removed from Whitelist",
             description: item.title,
             type: "success",
           })
@@ -279,8 +293,8 @@ export function DataTable({ initialData }: DataTableProps) {
               ep.status === "in_progress"
                 ? "conflict"
                 : ep.status === "completed"
-                ? "safe"
-                : "ghost",
+                  ? "safe"
+                  : "ghost",
             conflictReason: `Episode status: ${ep.status}`,
             isWhitelisted: item.isWhitelisted,
             episodes: [ep],
@@ -289,7 +303,9 @@ export function DataTable({ initialData }: DataTableProps) {
 
         setData((prev) =>
           prev.map((i) =>
-            i.id === item.id ? { ...i, episodes: res.episodes, subRows: episodeSubRows } : i
+            i.id === item.id
+              ? { ...i, episodes: res.episodes, subRows: episodeSubRows }
+              : i
           )
         )
       }
@@ -336,7 +352,8 @@ export function DataTable({ initialData }: DataTableProps) {
   const currentTypeFilter =
     (table.getColumn("mediaType")?.getFilterValue() as string) || "all"
   const currentStatusFilter =
-    (table.getColumn("status")?.getFilterValue() as ConflictStatus | undefined) || "all"
+    (table.getColumn("status")?.getFilterValue() as
+      ConflictStatus | undefined) || "all"
   const currentRequesterFilter =
     (table.getColumn("requester")?.getFilterValue() as string) || "all"
   const currentWatchStateFilter =
@@ -360,28 +377,30 @@ export function DataTable({ initialData }: DataTableProps) {
   return (
     <div className="space-y-4">
       {/* Metric Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
         <button
           type="button"
           aria-pressed={currentStatusFilter === "all"}
           onClick={() => handleCardClick("all")}
-          className="col-span-2 sm:col-span-1 text-left cursor-pointer focus-visible:outline-none w-full"
+          className="col-span-2 w-full cursor-pointer text-left focus-visible:outline-none sm:col-span-1"
         >
           <Card
             className={cn(
               "transition-colors",
               currentStatusFilter === "all"
-                ? "ring-1 ring-primary bg-muted/25 border-primary/50"
-                : "bg-muted/10 hover:bg-muted/20 border-border"
+                ? "border-primary/50 bg-muted/25 ring-1 ring-primary"
+                : "border-border bg-muted/10 hover:bg-muted/20"
             )}
           >
-            <CardHeader className="pb-1 pt-3 px-3">
-              <CardTitle className="text-[11px] uppercase tracking-wider text-muted-foreground font-normal">
+            <CardHeader className="px-3 pt-3 pb-1">
+              <CardTitle className="text-[11px] font-normal tracking-wider text-muted-foreground uppercase">
                 Total Audited
               </CardTitle>
             </CardHeader>
             <CardContent className="px-3 pb-3">
-              <span className="text-2xl font-bold font-mono">{metricCounts.total}</span>
+              <span className="font-mono text-2xl font-bold">
+                {metricCounts.total}
+              </span>
             </CardContent>
           </Card>
         </button>
@@ -390,23 +409,23 @@ export function DataTable({ initialData }: DataTableProps) {
           type="button"
           aria-pressed={currentStatusFilter === "safe"}
           onClick={() => handleCardClick("safe")}
-          className="text-left cursor-pointer focus-visible:outline-none w-full"
+          className="w-full cursor-pointer text-left focus-visible:outline-none"
         >
           <Card
             className={cn(
               "transition-colors",
               currentStatusFilter === "safe"
-                ? "ring-1 ring-emerald-500 bg-emerald-500/15 border-emerald-500/40"
+                ? "border-emerald-500/40 bg-emerald-500/15 ring-1 ring-emerald-500"
                 : "border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10"
             )}
           >
-            <CardHeader className="pb-1 pt-3 px-3">
-              <CardTitle className="text-[11px] uppercase tracking-wider text-emerald-400 font-normal">
+            <CardHeader className="px-3 pt-3 pb-1">
+              <CardTitle className="text-[11px] font-normal tracking-wider text-emerald-400 uppercase">
                 Safe to Purge
               </CardTitle>
             </CardHeader>
             <CardContent className="px-3 pb-3">
-              <span className="text-2xl font-bold font-mono text-emerald-400">
+              <span className="font-mono text-2xl font-bold text-emerald-400">
                 {metricCounts.safe}
               </span>
             </CardContent>
@@ -417,23 +436,23 @@ export function DataTable({ initialData }: DataTableProps) {
           type="button"
           aria-pressed={currentStatusFilter === "new"}
           onClick={() => handleCardClick("new")}
-          className="text-left cursor-pointer focus-visible:outline-none w-full"
+          className="w-full cursor-pointer text-left focus-visible:outline-none"
         >
           <Card
             className={cn(
               "transition-colors",
               currentStatusFilter === "new"
-                ? "ring-1 ring-sky-500 bg-sky-500/15 border-sky-500/40"
+                ? "border-sky-500/40 bg-sky-500/15 ring-1 ring-sky-500"
                 : "border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10"
             )}
           >
-            <CardHeader className="pb-1 pt-3 px-3">
-              <CardTitle className="text-[11px] uppercase tracking-wider text-sky-400 font-normal">
+            <CardHeader className="px-3 pt-3 pb-1">
+              <CardTitle className="text-[11px] font-normal tracking-wider text-sky-400 uppercase">
                 New / Unwatched
               </CardTitle>
             </CardHeader>
             <CardContent className="px-3 pb-3">
-              <span className="text-2xl font-bold font-mono text-sky-500">
+              <span className="font-mono text-2xl font-bold text-sky-500">
                 {metricCounts.newCount}
               </span>
             </CardContent>
@@ -444,23 +463,23 @@ export function DataTable({ initialData }: DataTableProps) {
           type="button"
           aria-pressed={currentStatusFilter === "conflict"}
           onClick={() => handleCardClick("conflict")}
-          className="text-left cursor-pointer focus-visible:outline-none w-full"
+          className="w-full cursor-pointer text-left focus-visible:outline-none"
         >
           <Card
             className={cn(
               "transition-colors",
               currentStatusFilter === "conflict"
-                ? "ring-1 ring-amber-500 bg-amber-500/15 border-amber-500/40"
+                ? "border-amber-500/40 bg-amber-500/15 ring-1 ring-amber-500"
                 : "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10"
             )}
           >
-            <CardHeader className="pb-1 pt-3 px-3">
-              <CardTitle className="text-[11px] uppercase tracking-wider text-amber-400 font-normal">
+            <CardHeader className="px-3 pt-3 pb-1">
+              <CardTitle className="text-[11px] font-normal tracking-wider text-amber-400 uppercase">
                 Active Conflicts
               </CardTitle>
             </CardHeader>
             <CardContent className="px-3 pb-3">
-              <span className="text-2xl font-bold font-mono text-amber-400">
+              <span className="font-mono text-2xl font-bold text-amber-400">
                 {metricCounts.conflict}
               </span>
             </CardContent>
@@ -471,23 +490,23 @@ export function DataTable({ initialData }: DataTableProps) {
           type="button"
           aria-pressed={currentStatusFilter === "ghost"}
           onClick={() => handleCardClick("ghost")}
-          className="text-left cursor-pointer focus-visible:outline-none w-full"
+          className="w-full cursor-pointer text-left focus-visible:outline-none"
         >
           <Card
             className={cn(
               "transition-colors",
               currentStatusFilter === "ghost"
-                ? "ring-1 ring-rose-500 bg-rose-500/15 border-rose-500/40"
+                ? "border-rose-500/40 bg-rose-500/15 ring-1 ring-rose-500"
                 : "border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10"
             )}
           >
-            <CardHeader className="pb-1 pt-3 px-3">
-              <CardTitle className="text-[11px] uppercase tracking-wider text-rose-400 font-normal">
+            <CardHeader className="px-3 pt-3 pb-1">
+              <CardTitle className="text-[11px] font-normal tracking-wider text-rose-400 uppercase">
                 Ghost Requests
               </CardTitle>
             </CardHeader>
             <CardContent className="px-3 pb-3">
-              <span className="text-2xl font-bold font-mono text-rose-400">
+              <span className="font-mono text-2xl font-bold text-rose-400">
                 {metricCounts.ghost}
               </span>
             </CardContent>
@@ -498,8 +517,8 @@ export function DataTable({ initialData }: DataTableProps) {
       <Separator />
 
       {/* Search & Faceted Filter Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/20 p-3 border border-border">
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+      <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-muted/20 p-3">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
           <div className="relative w-full sm:w-64">
             <Input
               ref={searchInputRef}
@@ -513,16 +532,16 @@ export function DataTable({ initialData }: DataTableProps) {
                   e.currentTarget.blur()
                 }
               }}
-              className="h-8 pl-8 pr-16 text-xs bg-background"
+              className="h-8 bg-background pr-16 pl-8 text-xs"
             />
-            <IconSearch className="pointer-events-none absolute left-2.5 top-2 size-4 text-muted-foreground" />
-            <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+            <IconSearch className="pointer-events-none absolute top-2 left-2.5 size-4 text-muted-foreground" />
+            <div className="pointer-events-none absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-0.5">
               {globalFilter ? (
-                <Kbd className="text-[10px] h-4 px-1">Esc</Kbd>
+                <Kbd className="h-4 px-1 text-[10px]">Esc</Kbd>
               ) : (
                 <KbdGroup>
-                  <Kbd className="text-[10px] h-4 px-1">Ctrl</Kbd>
-                  <Kbd className="text-[10px] h-4 px-1">K</Kbd>
+                  <Kbd className="h-4 px-1 text-[10px]">Ctrl</Kbd>
+                  <Kbd className="h-4 px-1 text-[10px]">K</Kbd>
                 </KbdGroup>
               )}
             </div>
@@ -531,24 +550,41 @@ export function DataTable({ initialData }: DataTableProps) {
           <Tabs
             value={currentTypeFilter}
             onValueChange={(val) => {
-              table.getColumn("mediaType")?.setFilterValue(val === "all" ? undefined : val)
+              table
+                .getColumn("mediaType")
+                ?.setFilterValue(val === "all" ? undefined : val)
             }}
           >
             <TabsList>
-              <TabsTrigger value="all" className="uppercase text-[11px]">All</TabsTrigger>
-              <TabsTrigger value="movie" className="uppercase text-[11px]">Movie</TabsTrigger>
-              <TabsTrigger value="tv" className="uppercase text-[11px]">TV</TabsTrigger>
+              <TabsTrigger value="all" className="text-[11px] uppercase">
+                All
+              </TabsTrigger>
+              <TabsTrigger value="movie" className="text-[11px] uppercase">
+                Movie
+              </TabsTrigger>
+              <TabsTrigger value="tv" className="text-[11px] uppercase">
+                TV
+              </TabsTrigger>
             </TabsList>
           </Tabs>
 
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
+          <div className="grid w-full grid-cols-2 items-center gap-2 sm:flex sm:w-auto sm:flex-wrap">
             <Select
-              value={currentRequesterFilter === "all" ? undefined : currentRequesterFilter}
+              value={
+                currentRequesterFilter === "all"
+                  ? undefined
+                  : currentRequesterFilter
+              }
               onValueChange={(val) => {
-                table.getColumn("requester")?.setFilterValue(!val || val === "all" ? undefined : val)
+                table
+                  .getColumn("requester")
+                  ?.setFilterValue(!val || val === "all" ? undefined : val)
               }}
             >
-              <SelectTrigger size="sm" className="h-8 min-w-36 text-xs bg-background">
+              <SelectTrigger
+                size="sm"
+                className="h-8 min-w-36 bg-background text-xs"
+              >
                 <SelectValue placeholder="All Requesters" />
               </SelectTrigger>
               <SelectContent>
@@ -562,21 +598,30 @@ export function DataTable({ initialData }: DataTableProps) {
             </Select>
 
             <Select
-              value={currentWatchStateFilter === "all" ? undefined : currentWatchStateFilter}
+              value={
+                currentWatchStateFilter === "all"
+                  ? undefined
+                  : currentWatchStateFilter
+              }
               onValueChange={(val) => {
-                table.getColumn("progress")?.setFilterValue(!val || val === "all" ? undefined : val)
+                table
+                  .getColumn("progress")
+                  ?.setFilterValue(!val || val === "all" ? undefined : val)
               }}
             >
-              <SelectTrigger size="sm" className="h-8 min-w-36 text-xs bg-background">
+              <SelectTrigger
+                size="sm"
+                className="h-8 min-w-36 bg-background text-xs"
+              >
                 <SelectValue placeholder="All Watch States">
                   {(val) =>
                     val === "completed"
                       ? "Completed"
                       : val === "in_progress"
-                      ? "In Progress"
-                      : val === "unplayed"
-                      ? "Unplayed"
-                      : "All Watch States"
+                        ? "In Progress"
+                        : val === "unplayed"
+                          ? "Unplayed"
+                          : "All Watch States"
                   }
                 </SelectValue>
               </SelectTrigger>
@@ -589,19 +634,28 @@ export function DataTable({ initialData }: DataTableProps) {
             </Select>
 
             <Select
-              value={currentWhitelistFilter === "all" ? undefined : currentWhitelistFilter}
+              value={
+                currentWhitelistFilter === "all"
+                  ? undefined
+                  : currentWhitelistFilter
+              }
               onValueChange={(val) => {
-                table.getColumn("whitelisted")?.setFilterValue(!val || val === "all" ? undefined : val)
+                table
+                  .getColumn("whitelisted")
+                  ?.setFilterValue(!val || val === "all" ? undefined : val)
               }}
             >
-              <SelectTrigger size="sm" className="h-8 min-w-32 text-xs bg-background">
+              <SelectTrigger
+                size="sm"
+                className="h-8 min-w-32 bg-background text-xs"
+              >
                 <SelectValue placeholder="All Items">
                   {(val) =>
                     val === "whitelisted"
                       ? "Whitelisted"
                       : val === "unprotected"
-                      ? "Unprotected"
-                      : "All Items"
+                        ? "Unprotected"
+                        : "All Items"
                   }
                 </SelectValue>
               </SelectTrigger>
@@ -644,7 +698,12 @@ export function DataTable({ initialData }: DataTableProps) {
                   disabled={isPending || isRefreshing}
                   onClick={handleRefresh}
                 >
-                  <IconRefresh className={cn("size-3.5 mr-1", isRefreshing && "animate-spin")} />
+                  <IconRefresh
+                    className={cn(
+                      "mr-1 size-3.5",
+                      isRefreshing && "animate-spin"
+                    )}
+                  />
                   Refresh
                 </Button>
               }
@@ -652,8 +711,8 @@ export function DataTable({ initialData }: DataTableProps) {
             <TooltipContent className="flex items-center gap-1.5">
               <span>Refresh audit data</span>
               <KbdGroup>
-                <Kbd className="text-[10px] h-4 px-1">Alt</Kbd>
-                <Kbd className="text-[10px] h-4 px-1">R</Kbd>
+                <Kbd className="h-4 px-1 text-[10px]">Alt</Kbd>
+                <Kbd className="h-4 px-1 text-[10px]">R</Kbd>
               </KbdGroup>
             </TooltipContent>
           </Tooltip>
@@ -673,7 +732,10 @@ export function DataTable({ initialData }: DataTableProps) {
                   >
                     {header.isPlaceholder
                       ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -695,7 +757,10 @@ export function DataTable({ initialData }: DataTableProps) {
               ))
             ) : table.getRowModel().rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length} className="text-center py-8 text-muted-foreground">
+                <TableCell
+                  colSpan={columns.length}
+                  className="py-8 text-center text-muted-foreground"
+                >
                   No matching media items found.
                 </TableCell>
               </TableRow>
@@ -713,9 +778,14 @@ export function DataTable({ initialData }: DataTableProps) {
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
-                        className={(cell.column.columnDef.meta as any)?.className}
+                        className={
+                          (cell.column.columnDef.meta as any)?.className
+                        }
                       >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
                       </TableCell>
                     ))}
                   </TableRow>
@@ -728,7 +798,9 @@ export function DataTable({ initialData }: DataTableProps) {
                         {row.getVisibleCells().map((cell) => (
                           <TableCell
                             key={cell.id}
-                            className={(cell.column.columnDef.meta as any)?.className}
+                            className={
+                              (cell.column.columnDef.meta as any)?.className
+                            }
                           >
                             <Skeleton className="h-4 w-3/4" />
                           </TableCell>
@@ -743,10 +815,11 @@ export function DataTable({ initialData }: DataTableProps) {
       </div>
 
       {/* Pagination Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground px-1">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1 text-xs text-muted-foreground">
         <div className="flex items-center gap-4">
           <div className="font-mono">
-            Page {table.getState().pagination.pageIndex + 1} of {Math.max(1, table.getPageCount())} (
+            Page {table.getState().pagination.pageIndex + 1} of{" "}
+            {Math.max(1, table.getPageCount())} (
             {table.getFilteredRowModel().rows.length} items)
           </div>
           <div className="flex items-center gap-1.5">
@@ -757,7 +830,10 @@ export function DataTable({ initialData }: DataTableProps) {
                 table.setPageSize(Number(val))
               }}
             >
-              <SelectTrigger size="sm" className="h-7 w-20 text-xs bg-background">
+              <SelectTrigger
+                size="sm"
+                className="h-7 w-20 bg-background text-xs"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -776,7 +852,7 @@ export function DataTable({ initialData }: DataTableProps) {
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
-            <IconChevronLeft className="size-3 mr-0.5" /> Previous
+            <IconChevronLeft className="mr-0.5 size-3" /> Previous
           </Button>
           <Button
             variant="outline"
@@ -784,7 +860,7 @@ export function DataTable({ initialData }: DataTableProps) {
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            Next <IconChevronRight className="size-3 ml-0.5" />
+            Next <IconChevronRight className="ml-0.5 size-3" />
           </Button>
         </div>
       </div>
@@ -794,15 +870,22 @@ export function DataTable({ initialData }: DataTableProps) {
         selectedItem={selectedItem}
         onClose={() => setSelectedItem(null)}
         onItemUpdated={(itemId, updates) => {
-          setData((prev) => prev.map((i) => (i.id === itemId ? { ...i, ...updates } : i)))
-          setSelectedItem((prev) => (prev && prev.id === itemId ? { ...prev, ...updates } : prev))
+          setData((prev) =>
+            prev.map((i) => (i.id === itemId ? { ...i, ...updates } : i))
+          )
+          setSelectedItem((prev) =>
+            prev && prev.id === itemId ? { ...prev, ...updates } : prev
+          )
         }}
         onItemDeleted={({ item, target, episodeFileId }) => {
           if (target === "single_episode" && episodeFileId) {
             setData((prev) =>
               prev.map((i) =>
                 i.id === item.id || i.tmdbId === item.tmdbId
-                  ? { ...i, subRows: i.subRows?.filter((sub) => sub.id !== item.id) }
+                  ? {
+                      ...i,
+                      subRows: i.subRows?.filter((sub) => sub.id !== item.id),
+                    }
                   : i
               )
             )

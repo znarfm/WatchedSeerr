@@ -26,7 +26,11 @@ export function toggleWhitelistItem(params: {
   mediaType: "movie" | "tv"
   reason?: string
 }): boolean {
-  const existing = db.select().from(whitelist).where(eq(whitelist.id, params.id)).get()
+  const existing = db
+    .select()
+    .from(whitelist)
+    .where(eq(whitelist.id, params.id))
+    .get()
 
   if (existing) {
     db.delete(whitelist).where(eq(whitelist.id, params.id)).run()

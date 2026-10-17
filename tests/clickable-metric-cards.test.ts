@@ -2,7 +2,12 @@ import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import React from "react"
 import { renderToStaticMarkup } from "react-dom/server"
-import { computeMetricCounts, resolveStatusCardClick, DataTable, isSearchShortcut } from "../components/audit-table/data-table"
+import {
+  computeMetricCounts,
+  resolveStatusCardClick,
+  DataTable,
+  isSearchShortcut,
+} from "../components/audit-table/data-table"
 import { sortInactiveDays, columns } from "../components/audit-table/columns"
 import { TooltipProvider } from "../components/ui/tooltip"
 import type { AuditMediaItem } from "../types"
@@ -185,10 +190,16 @@ describe("Clickable Metric Cards & Table UX Seam", () => {
     assert.equal(isSearchShortcut({ key: "k", ctrlKey: true }), true)
     assert.equal(isSearchShortcut({ key: "K", ctrlKey: true }), true)
     assert.equal(isSearchShortcut({ key: "k", metaKey: true }), true)
-    assert.equal(isSearchShortcut({ key: "k", ctrlKey: true, targetTagName: "INPUT" }), true)
+    assert.equal(
+      isSearchShortcut({ key: "k", ctrlKey: true, targetTagName: "INPUT" }),
+      true
+    )
 
     // Alt modifier blocks Ctrl+K
-    assert.equal(isSearchShortcut({ key: "k", ctrlKey: true, altKey: true }), false)
+    assert.equal(
+      isSearchShortcut({ key: "k", ctrlKey: true, altKey: true }),
+      false
+    )
 
     // Slash triggers search when not inside an editable tag
     assert.equal(isSearchShortcut({ key: "/", targetTagName: "DIV" }), true)
@@ -197,7 +208,10 @@ describe("Clickable Metric Cards & Table UX Seam", () => {
 
     // Slash is ignored inside INPUT, TEXTAREA, and SELECT
     assert.equal(isSearchShortcut({ key: "/", targetTagName: "INPUT" }), false)
-    assert.equal(isSearchShortcut({ key: "/", targetTagName: "TEXTAREA" }), false)
+    assert.equal(
+      isSearchShortcut({ key: "/", targetTagName: "TEXTAREA" }),
+      false
+    )
     assert.equal(isSearchShortcut({ key: "/", targetTagName: "SELECT" }), false)
 
     // Other keys do not trigger search
@@ -276,27 +290,48 @@ describe("Clickable Metric Cards & Table UX Seam", () => {
     // Keyboard shortcut hints rendered
     assert.ok(html.includes("Ctrl"), "Search bar contains Ctrl Kbd")
     assert.ok(html.includes("K"), "Search bar contains K Kbd")
-    assert.ok(html.includes('data-slot="kbd"'), "Search bar renders Kbd shortcut")
+    assert.ok(
+      html.includes('data-slot="kbd"'),
+      "Search bar renders Kbd shortcut"
+    )
     assert.ok(html.includes("Refresh"), "Toolbar contains Refresh button")
 
     // Responsive table columns rendered with responsive classes
     assert.ok(html.includes("Size"), "Header contains Size column")
     assert.ok(html.includes("Requested"), "Header contains Requested column")
     assert.ok(html.includes("Household"), "Header contains Household column")
-    assert.ok(html.includes("hidden md:table-cell"), "Columns contain hidden md:table-cell")
-    assert.ok(html.includes("hidden lg:table-cell"), "Columns contain hidden lg:table-cell")
-    assert.ok(html.includes("hidden sm:table-cell"), "Columns contain hidden sm:table-cell")
+    assert.ok(
+      html.includes("hidden md:table-cell"),
+      "Columns contain hidden md:table-cell"
+    )
+    assert.ok(
+      html.includes("hidden lg:table-cell"),
+      "Columns contain hidden lg:table-cell"
+    )
+    assert.ok(
+      html.includes("hidden sm:table-cell"),
+      "Columns contain hidden sm:table-cell"
+    )
 
     // Sky-blue "New" status badge for item-4
-    assert.ok(html.includes("bg-sky-500/15"), "Status cell contains sky-blue New badge")
-    assert.ok(html.includes("text-sky-400"), "Status cell contains text-sky-400")
+    assert.ok(
+      html.includes("bg-sky-500/15"),
+      "Status cell contains sky-blue New badge"
+    )
+    assert.ok(
+      html.includes("text-sky-400"),
+      "Status cell contains text-sky-400"
+    )
 
     // Disk size formatted in GB and MB
     assert.ok(html.includes("14.0 GB"), "Table row formats 15 GB as 14.0 GB")
     assert.ok(html.includes("763 MB"), "Table row formats 800 MB as 763 MB")
 
     // Directional sort icons present in headers
-    assert.ok(html.includes("tabler-icon-arrows-sort"), "Sortable headers include sort icon")
+    assert.ok(
+      html.includes("tabler-icon-arrows-sort"),
+      "Sortable headers include sort icon"
+    )
 
     // Poster thumbnail contains jellyfinImageTag when available
     assert.ok(
@@ -311,11 +346,20 @@ describe("Clickable Metric Cards & Table UX Seam", () => {
     )
 
     // Toolbar filters: All Requesters, All Watch States, All Items
-    assert.ok(html.includes("All Requesters"), "Toolbar includes Requester dropdown")
-    assert.ok(html.includes("All Watch States"), "Toolbar includes Watch State dropdown")
+    assert.ok(
+      html.includes("All Requesters"),
+      "Toolbar includes Requester dropdown"
+    )
+    assert.ok(
+      html.includes("All Watch States"),
+      "Toolbar includes Watch State dropdown"
+    )
     assert.ok(html.includes("All Items"), "Toolbar includes Whitelist dropdown")
 
     // Pagination rows-per-page selector
-    assert.ok(html.includes("Rows per page:"), "Pagination footer includes rows-per-page label")
+    assert.ok(
+      html.includes("Rows per page:"),
+      "Pagination footer includes rows-per-page label"
+    )
   })
 })

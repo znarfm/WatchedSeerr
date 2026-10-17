@@ -38,7 +38,11 @@ declare module "@tanstack/react-table" {
 
 export interface TableMeta {
   onToggleWhitelist: (item: AuditMediaItem) => void
-  onDelete: (item: AuditMediaItem, target?: "all" | "single_episode", episodeFileId?: number) => void
+  onDelete: (
+    item: AuditMediaItem,
+    target?: "all" | "single_episode",
+    episodeFileId?: number
+  ) => void
   onSelectRow: (item: AuditMediaItem) => void
   onToggleExpand?: (item: AuditMediaItem) => void
   loadingEpisodes?: Record<string, boolean>
@@ -55,13 +59,19 @@ export function sortInactiveDays(
   return valA - valB
 }
 
-function SortHeader({ column, title }: { column: Column<AuditMediaItem, any>; title: string }) {
+function SortHeader({
+  column,
+  title,
+}: {
+  column: Column<AuditMediaItem, any>
+  title: string
+}) {
   const isSorted = column.getIsSorted()
   return (
     <Button
       variant="ghost"
       size="xs"
-      className="text-[11px] font-semibold uppercase tracking-wider p-0 hover:bg-transparent"
+      className="p-0 text-[11px] font-semibold tracking-wider uppercase hover:bg-transparent"
       onClick={() => column.toggleSorting(isSorted === "asc")}
     >
       {title}
@@ -84,7 +94,9 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
       <div onClick={(e) => e.stopPropagation()} className="flex items-center">
         <Checkbox
           checked={table.getIsAllPageRowsSelected()}
-          onCheckedChange={(checked) => table.toggleAllPageRowsSelected(!!checked)}
+          onCheckedChange={(checked) =>
+            table.toggleAllPageRowsSelected(!!checked)
+          }
           aria-label="Select all"
         />
       </div>
@@ -121,7 +133,9 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
         return (
           <div className="flex items-center gap-2 pl-6">
             <span className="font-mono text-xs text-muted-foreground">↳</span>
-            <span className="font-medium text-xs text-foreground truncate">{item.title}</span>
+            <span className="truncate text-xs font-medium text-foreground">
+              {item.title}
+            </span>
           </div>
         )
       }
@@ -132,7 +146,7 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
             <Button
               variant="ghost"
               size="icon"
-              className="size-5 p-0 shrink-0 text-muted-foreground hover:text-foreground"
+              className="size-5 shrink-0 p-0 text-muted-foreground hover:text-foreground"
               disabled={isLoading}
               onClick={(e) => {
                 e.stopPropagation()
@@ -157,16 +171,18 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
           {(() => {
             const posterUrl = item.jellyfinItemId
               ? `/api/proxy/poster?jellyfinItemId=${item.jellyfinItemId}${
-                  item.jellyfinImageTag ? `&tag=${encodeURIComponent(item.jellyfinImageTag)}` : ""
+                  item.jellyfinImageTag
+                    ? `&tag=${encodeURIComponent(item.jellyfinImageTag)}`
+                    : ""
                 }`
               : item.posterPath
-              ? `/api/proxy/poster?posterPath=${encodeURIComponent(item.posterPath)}`
-              : item.tmdbId
-              ? `/api/proxy/poster?tmdbId=${item.tmdbId}&mediaType=${item.mediaType}`
-              : null
+                ? `/api/proxy/poster?posterPath=${encodeURIComponent(item.posterPath)}`
+                : item.tmdbId
+                  ? `/api/proxy/poster?tmdbId=${item.tmdbId}&mediaType=${item.mediaType}`
+                  : null
 
             return (
-              <div className="relative size-9 shrink-0 overflow-hidden bg-muted border border-border flex items-center justify-center">
+              <div className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden border border-border bg-muted">
                 {posterUrl ? (
                   <img
                     src={posterUrl}
@@ -174,7 +190,7 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
                     className="size-full object-cover"
                     loading="lazy"
                     onError={(e) => {
-                      (e.currentTarget as HTMLElement).style.display = "none"
+                      ;(e.currentTarget as HTMLElement).style.display = "none"
                     }}
                   />
                 ) : item.mediaType === "tv" ? (
@@ -185,14 +201,18 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
               </div>
             )
           })()}
-          <div className="flex flex-col min-w-0">
-            <span className="font-medium text-foreground truncate">{item.title}</span>
+          <div className="flex min-w-0 flex-col">
+            <span className="truncate font-medium text-foreground">
+              {item.title}
+            </span>
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
               {item.year && <span>{item.year}</span>}
               <span>•</span>
               <span className="uppercase">{item.mediaType}</span>
               {item.isWhitelisted && (
-                <span className="text-amber-500 font-semibold">• Whitelisted</span>
+                <span className="font-semibold text-amber-500">
+                  • Whitelisted
+                </span>
               )}
             </div>
           </div>
@@ -220,8 +240,10 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
       return (
         <div className="flex items-center gap-2">
           <Avatar className="size-5 shrink-0">
-            {avatarSrc && <AvatarImage src={avatarSrc} alt={item.requester.username} />}
-            <AvatarFallback className="text-[10px] uppercase font-mono">
+            {avatarSrc && (
+              <AvatarImage src={avatarSrc} alt={item.requester.username} />
+            )}
+            <AvatarFallback className="font-mono text-[10px] uppercase">
               {item.requester.username.slice(0, 2)}
             </AvatarFallback>
           </Avatar>
@@ -234,7 +256,9 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
     id: "progress",
     accessorFn: (row) => row.requesterState.progressPercent,
     meta: { className: "w-44" },
-    header: ({ column }) => <SortHeader column={column} title="Requester Progress" />,
+    header: ({ column }) => (
+      <SortHeader column={column} title="Requester Progress" />
+    ),
     filterFn: (row, _id, filterValue) => {
       if (!filterValue || filterValue === "all") return true
       return row.original.requesterState.status === filterValue
@@ -244,7 +268,7 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
       return (
         <div className="space-y-1">
           <div className="flex justify-between text-[11px]">
-            <span className="capitalize text-muted-foreground">
+            <span className="text-muted-foreground capitalize">
               {state.status.replace("_", " ")}
             </span>
             <span className="font-mono">{state.progressPercent}%</span>
@@ -256,7 +280,8 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
   },
   {
     id: "household",
-    accessorFn: (row) => row.householdStates.filter((h) => h.status !== "unplayed").length,
+    accessorFn: (row) =>
+      row.householdStates.filter((h) => h.status !== "unplayed").length,
     meta: { className: "w-28 hidden md:table-cell" },
     header: ({ column }) => <SortHeader column={column} title="Household" />,
     cell: ({ row }) => {
@@ -264,7 +289,7 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
         (h) => h.status !== "unplayed"
       )
       if (activeHousehold.length === 0) {
-        return <span className="text-muted-foreground text-xs">—</span>
+        return <span className="text-xs text-muted-foreground">—</span>
       }
 
       return (
@@ -274,15 +299,18 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
               <TooltipTrigger
                 render={
                   <Avatar className="size-5 shrink-0 border border-background">
-                    {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.username} />}
-                    <AvatarFallback className="text-[9px] uppercase font-mono">
+                    {user.avatarUrl && (
+                      <AvatarImage src={user.avatarUrl} alt={user.username} />
+                    )}
+                    <AvatarFallback className="font-mono text-[9px] uppercase">
                       {user.username.slice(0, 2)}
                     </AvatarFallback>
                   </Avatar>
                 }
               />
               <TooltipContent>
-                {user.username}: {user.status.replace("_", " ")} ({user.progressPercent}%)
+                {user.username}: {user.status.replace("_", " ")} (
+                {user.progressPercent}%)
               </TooltipContent>
             </Tooltip>
           ))}
@@ -301,11 +329,18 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
 
       return (
         <div className="flex items-center gap-1.5 font-mono text-xs">
-          <span className={item.sizeBytes ? "text-foreground" : "text-muted-foreground"}>
+          <span
+            className={
+              item.sizeBytes ? "text-foreground" : "text-muted-foreground"
+            }
+          >
             {formattedSize}
           </span>
           {item.quality && (
-            <Badge variant="secondary" className="text-[10px] px-1 py-0 font-mono max-w-[72px] truncate">
+            <Badge
+              variant="secondary"
+              className="max-w-[72px] truncate px-1 py-0 font-mono text-[10px]"
+            >
               {item.quality}
             </Badge>
           )}
@@ -321,7 +356,11 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
     cell: ({ row }) => {
       const dateStr = row.original.requestedAt
       const formatted = dateStr ? new Date(dateStr).toLocaleDateString() : "—"
-      return <span className="text-xs text-muted-foreground font-mono">{formatted}</span>
+      return (
+        <span className="font-mono text-xs text-muted-foreground">
+          {formatted}
+        </span>
+      )
     },
   },
   {
@@ -334,9 +373,11 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
     cell: ({ row }) => {
       const days = row.original.daysSinceLastPlayed
       return (
-        <div className="flex items-center gap-1 text-muted-foreground text-xs">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <IconClock className="size-3.5 shrink-0" />
-          <span>{days !== null && days !== undefined ? `${days}d ago` : "Never"}</span>
+          <span>
+            {days !== null && days !== undefined ? `${days}d ago` : "Never"}
+          </span>
         </div>
       )
     },
@@ -345,33 +386,44 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
     id: "status",
     accessorKey: "conflictStatus",
     meta: { className: "w-28 whitespace-nowrap" },
-    header: ({ column }) => <SortHeader column={column} title="Retention Status" />,
+    header: ({ column }) => (
+      <SortHeader column={column} title="Retention Status" />
+    ),
     filterFn: "equalsString",
     cell: ({ row }) => {
       const status = row.original.conflictStatus
       if (status === "safe") {
         return (
-          <Badge variant="outline" className="text-emerald-500 border-emerald-500/30 gap-1">
+          <Badge
+            variant="outline"
+            className="gap-1 border-emerald-500/30 text-emerald-500"
+          >
             <IconCheck className="size-3" /> Safe
           </Badge>
         )
       }
       if (status === "new") {
         return (
-          <Badge className="bg-sky-500/15 text-sky-400 border border-sky-500/30 hover:bg-sky-500/20">
-            <IconSparkles className="size-3 mr-1" /> New
+          <Badge className="border border-sky-500/30 bg-sky-500/15 text-sky-400 hover:bg-sky-500/20">
+            <IconSparkles className="mr-1 size-3" /> New
           </Badge>
         )
       }
       if (status === "conflict") {
         return (
-          <Badge variant="outline" className="text-amber-500 border-amber-500/30 gap-1">
+          <Badge
+            variant="outline"
+            className="gap-1 border-amber-500/30 text-amber-500"
+          >
             <IconAlertTriangle className="size-3" /> Conflict
           </Badge>
         )
       }
       return (
-        <Badge variant="outline" className="text-rose-500 border-rose-500/30 gap-1">
+        <Badge
+          variant="outline"
+          className="gap-1 border-rose-500/30 text-rose-500"
+        >
           <IconGhost className="size-3" /> Ghost
         </Badge>
       )
@@ -388,7 +440,7 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
   {
     id: "actions",
     meta: { className: "w-12 text-right" },
-    header: () => <span className="text-right block">Actions</span>,
+    header: () => <span className="block text-right">Actions</span>,
     enableSorting: false,
     cell: ({ row, table }) => {
       const item = row.original
@@ -432,11 +484,15 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="size-7 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
+                  className="size-7 text-rose-500 hover:bg-rose-500/10 hover:text-rose-600"
                   disabled={meta?.isPending}
                   onClick={() => {
                     if (isSubRow) {
-                      meta?.onDelete(item, "single_episode", sonarrEpisodeFileId)
+                      meta?.onDelete(
+                        item,
+                        "single_episode",
+                        sonarrEpisodeFileId
+                      )
                     } else {
                       meta?.onDelete(item, "all")
                     }

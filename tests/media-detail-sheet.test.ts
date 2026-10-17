@@ -28,7 +28,8 @@ const mockMovie: AuditMediaItem = {
   quality: "4K",
   qualityFull: "4K Remux",
   genres: ["Action", "Sci-Fi"],
-  overview: "A thief who steals corporate secrets through dream-sharing technology.",
+  overview:
+    "A thief who steals corporate secrets through dream-sharing technology.",
   requestedAt: "2024-01-15T00:00:00Z",
   requester: {
     id: 1,
@@ -124,15 +125,24 @@ describe("MediaDetailSheet Seam", () => {
       const links = resolveExternalLinks(mockTvSeries)
       assert.equal(links.imdb, "https://www.imdb.com/title/tt0903747/")
       assert.equal(links.letterboxd, undefined)
-      assert.equal(links.jellyfin, "https://jf.example.com/web/index.html#!/details?id=jf-tv-1")
+      assert.equal(
+        links.jellyfin,
+        "https://jf.example.com/web/index.html#!/details?id=jf-tv-1"
+      )
       assert.equal(links.seerr, "https://seerr.example.com/tv/1396")
       assert.equal(links.arr, "https://sonarr.example.com/series/breaking-bad")
     })
   })
 
-  const renderBody = (props: React.ComponentProps<typeof MediaDetailSheetBody>) =>
+  const renderBody = (
+    props: React.ComponentProps<typeof MediaDetailSheetBody>
+  ) =>
     renderToStaticMarkup(
-      React.createElement(Sheet, { open: true }, React.createElement(MediaDetailSheetBody, props))
+      React.createElement(
+        Sheet,
+        { open: true },
+        React.createElement(MediaDetailSheetBody, props)
+      )
     )
 
   describe("MediaDetailSheetBody SSR Markup", () => {
@@ -144,15 +154,23 @@ describe("MediaDetailSheet Seam", () => {
 
       // Poster proxy thumbnail
       assert.ok(
-        html.includes("/api/proxy/poster?jellyfinItemId=jf-movie-1&amp;w=400&amp;tag=tag-movie-1"),
+        html.includes(
+          "/api/proxy/poster?jellyfinItemId=jf-movie-1&amp;w=400&amp;tag=tag-movie-1"
+        ),
         "Renders poster proxy with w=400 and tag"
       )
       assert.ok(html.includes("Inception"), "Renders title")
       assert.ok(html.includes("2010"), "Renders year")
       assert.ok(html.includes("movie"), "Renders media type")
-      assert.ok(html.includes("uppercase"), "Applies uppercase style to media type")
+      assert.ok(
+        html.includes("uppercase"),
+        "Applies uppercase style to media type"
+      )
       assert.ok(html.includes("14.0 GB"), "Renders formatted GB size")
-      assert.ok(html.includes("4K Remux"), "Renders qualityFull badge preference")
+      assert.ok(
+        html.includes("4K Remux"),
+        "Renders qualityFull badge preference"
+      )
       assert.ok(html.includes("Action"), "Renders genre badge")
       assert.ok(html.includes("Sci-Fi"), "Renders genre badge")
     })
@@ -161,8 +179,14 @@ describe("MediaDetailSheet Seam", () => {
       const html = renderBody({ selectedItem: mockTvSeries })
 
       // External link pills
-      assert.ok(html.includes('target="_blank"'), "External links open in new tab")
-      assert.ok(html.includes('rel="noopener noreferrer"'), "External links have secure rel")
+      assert.ok(
+        html.includes('target="_blank"'),
+        "External links open in new tab"
+      )
+      assert.ok(
+        html.includes('rel="noopener noreferrer"'),
+        "External links have secure rel"
+      )
       assert.ok(html.includes("Sonarr"), "Renders Sonarr pill for TV series")
       assert.ok(html.includes("Jellyfin"), "Renders Jellyfin pill")
       assert.ok(html.includes("Seerr"), "Renders Seerr pill")
@@ -180,8 +204,14 @@ describe("MediaDetailSheet Seam", () => {
       assert.ok(htmlMovie.includes("Unprotected"), "Unprotected label rendered")
 
       const htmlTv = renderBody({ selectedItem: mockTvSeries })
-      assert.ok(htmlTv.includes("Never"), "DaysSinceLastPlayed null formatted as Never")
-      assert.ok(htmlTv.includes("Whitelisted"), "Whitelisted protection rendered")
+      assert.ok(
+        htmlTv.includes("Never"),
+        "DaysSinceLastPlayed null formatted as Never"
+      )
+      assert.ok(
+        htmlTv.includes("Whitelisted"),
+        "Whitelisted protection rendered"
+      )
     })
 
     it("renders retention status banner for safe, new, conflict, and ghost", () => {
@@ -190,17 +220,31 @@ describe("MediaDetailSheet Seam", () => {
       assert.ok(safeHtml.includes("text-emerald-400"), "Emerald text for safe")
 
       const conflictHtml = renderBody({ selectedItem: mockTvSeries })
-      assert.ok(conflictHtml.includes("conflict Status"), "Renders conflict Status")
-      assert.ok(conflictHtml.includes("text-amber-400"), "Amber text for conflict")
+      assert.ok(
+        conflictHtml.includes("conflict Status"),
+        "Renders conflict Status"
+      )
+      assert.ok(
+        conflictHtml.includes("text-amber-400"),
+        "Amber text for conflict"
+      )
 
       const newHtml = renderBody({
-        selectedItem: { ...mockMovie, conflictStatus: "new", conflictReason: "Newly added" },
+        selectedItem: {
+          ...mockMovie,
+          conflictStatus: "new",
+          conflictReason: "Newly added",
+        },
       })
       assert.ok(newHtml.includes("new Status"), "Renders new Status")
       assert.ok(newHtml.includes("bg-sky-500/10"), "Sky styling for new")
 
       const ghostHtml = renderBody({
-        selectedItem: { ...mockMovie, conflictStatus: "ghost", conflictReason: "No media file found" },
+        selectedItem: {
+          ...mockMovie,
+          conflictStatus: "ghost",
+          conflictReason: "No media file found",
+        },
       })
       assert.ok(ghostHtml.includes("ghost Status"), "Renders ghost Status")
       assert.ok(ghostHtml.includes("text-rose-400"), "Rose styling for ghost")
@@ -209,16 +253,28 @@ describe("MediaDetailSheet Seam", () => {
     it("renders overview when present and omits when absent", () => {
       const withOverview = renderBody({ selectedItem: mockMovie })
       assert.ok(withOverview.includes("Overview"), "Includes Overview header")
-      assert.ok(withOverview.includes("A thief who steals corporate secrets"), "Includes overview text")
+      assert.ok(
+        withOverview.includes("A thief who steals corporate secrets"),
+        "Includes overview text"
+      )
 
       const withoutOverview = renderBody({ selectedItem: mockTvSeries })
-      assert.ok(!withoutOverview.includes("Overview"), "Omits Overview header when empty")
+      assert.ok(
+        !withoutOverview.includes("Overview"),
+        "Omits Overview header when empty"
+      )
     })
 
     it("renders household playback breakdown and selectively renders AvatarImage only when URL is truthy", () => {
       const html = renderBody({ selectedItem: mockMovie })
-      assert.ok(html.includes("Household Playback Breakdown"), "Household header present")
-      assert.ok(html.includes("border-primary/40"), "Requester card has primary border highlight")
+      assert.ok(
+        html.includes("Household Playback Breakdown"),
+        "Household header present"
+      )
+      assert.ok(
+        html.includes("border-primary/40"),
+        "Requester card has primary border highlight"
+      )
       assert.ok(html.includes("alice (Requester)"), "Requester label present")
       assert.ok(html.includes("bob"), "Household member bob present")
       assert.ok(html.includes("charlie"), "Household member charlie present")
@@ -232,34 +288,59 @@ describe("MediaDetailSheet Seam", () => {
       const householdCards = cardsContainer.props.children[1]
 
       // Alice (requester) has avatar URL -> AvatarImage present
-      const aliceAvatar = requesterCard.props.children[0].props.children[0].props.children[0]
-      assert.ok(aliceAvatar.props.children[0], "Alice Avatar has AvatarImage element")
+      const aliceAvatar =
+        requesterCard.props.children[0].props.children[0].props.children[0]
+      assert.ok(
+        aliceAvatar.props.children[0],
+        "Alice Avatar has AvatarImage element"
+      )
       assert.equal(
         aliceAvatar.props.children[0].props.src,
         "/api/proxy/avatar?userId=u-1&tag=tag-1"
       )
 
       // Bob has avatarUrl -> AvatarImage present
-      const bobAvatar = householdCards[0].props.children[0].props.children[0].props.children[0]
-      assert.ok(bobAvatar.props.children[0], "Bob Avatar has AvatarImage element")
+      const bobAvatar =
+        householdCards[0].props.children[0].props.children[0].props.children[0]
+      assert.ok(
+        bobAvatar.props.children[0],
+        "Bob Avatar has AvatarImage element"
+      )
       assert.equal(
         bobAvatar.props.children[0].props.src,
         "/api/proxy/avatar?userId=u-2&tag=tag-2"
       )
 
       // Charlie has NO avatarUrl -> AvatarImage is undefined/falsy
-      const charlieAvatar = householdCards[1].props.children[0].props.children[0].props.children[0]
-      assert.equal(charlieAvatar.props.children[0], undefined, "Charlie Avatar has NO AvatarImage element")
+      const charlieAvatar =
+        householdCards[1].props.children[0].props.children[0].props.children[0]
+      assert.equal(
+        charlieAvatar.props.children[0],
+        undefined,
+        "Charlie Avatar has NO AvatarImage element"
+      )
     })
 
     it("renders pinned footer with Whitelist Media and Purge Media buttons", () => {
       const unwhitelistedHtml = renderBody({ selectedItem: mockMovie })
-      assert.ok(unwhitelistedHtml.includes('data-slot="sheet-footer"'), "Has sheet-footer")
-      assert.ok(unwhitelistedHtml.includes("Whitelist Media"), "Button says Whitelist Media when unwhitelisted")
-      assert.ok(unwhitelistedHtml.includes("Purge Media"), "Purge Media button exists")
+      assert.ok(
+        unwhitelistedHtml.includes('data-slot="sheet-footer"'),
+        "Has sheet-footer"
+      )
+      assert.ok(
+        unwhitelistedHtml.includes("Whitelist Media"),
+        "Button says Whitelist Media when unwhitelisted"
+      )
+      assert.ok(
+        unwhitelistedHtml.includes("Purge Media"),
+        "Purge Media button exists"
+      )
 
       const whitelistedHtml = renderBody({ selectedItem: mockTvSeries })
-      assert.ok(whitelistedHtml.includes("Remove Whitelist"), "Button says Remove Whitelist when whitelisted")
+      assert.ok(
+        whitelistedHtml.includes("Remove Whitelist"),
+        "Button says Remove Whitelist when whitelisted"
+      )
     })
   })
 })
@@ -269,34 +350,56 @@ describe("Route-Level Skeleton Loaders Seam", () => {
     const html = renderToStaticMarkup(React.createElement(Loading))
 
     // Header presence
-    assert.ok(html.includes("WatchedSeerr"), "Loading skeleton has WatchedSeerr header")
+    assert.ok(
+      html.includes("WatchedSeerr"),
+      "Loading skeleton has WatchedSeerr header"
+    )
 
     // 5 metric card grid
     assert.ok(
-      html.includes("grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4"),
+      html.includes(
+        "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4"
+      ),
       "Contains 5-card responsive metric grid"
     )
 
     // Toolbar skeleton
-    assert.ok(html.includes("w-full sm:w-64"), "Contains responsive search skeleton")
+    assert.ok(
+      html.includes("w-full sm:w-64"),
+      "Contains responsive search skeleton"
+    )
 
     // 10 table rows
     const rowMatches = html.match(/data-slot="table-row"/g) || []
     // 1 header row + 10 body rows = 11 total
-    assert.equal(rowMatches.length, 11, "Contains 1 header row and 10 body skeleton rows")
+    assert.equal(
+      rowMatches.length,
+      11,
+      "Contains 1 header row and 10 body skeleton rows"
+    )
   })
 
   it("renders Watch Matrix route skeleton (app/matrix/loading.tsx) with sticky media column and 4 user columns", () => {
     const html = renderToStaticMarkup(React.createElement(MatrixLoading))
 
     // Header presence
-    assert.ok(html.includes("Watch Matrix"), "Matrix loading skeleton has Watch Matrix header")
+    assert.ok(
+      html.includes("Watch Matrix"),
+      "Matrix loading skeleton has Watch Matrix header"
+    )
 
     // Sticky media column
-    assert.ok(html.includes("sticky left-0"), "Sticky left media column present")
+    assert.ok(
+      html.includes("sticky left-0"),
+      "Sticky left media column present"
+    )
 
     // 10 table rows
     const rowMatches = html.match(/data-slot="table-row"/g) || []
-    assert.equal(rowMatches.length, 11, "Contains 1 header row and 10 matrix skeleton rows")
+    assert.equal(
+      rowMatches.length,
+      11,
+      "Contains 1 header row and 10 matrix skeleton rows"
+    )
   })
 })

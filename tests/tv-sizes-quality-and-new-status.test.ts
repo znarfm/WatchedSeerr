@@ -8,7 +8,10 @@ describe("TV Sizes, Quality Normalization & New Status Seam", () => {
     let capturedHeaders: Record<string, string> = {}
 
     const originalFetch = globalThis.fetch
-    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+    globalThis.fetch = (async (
+      url: string | URL | Request,
+      init?: RequestInit
+    ) => {
       capturedUrl = url.toString()
       capturedHeaders = (init?.headers as Record<string, string>) || {}
       return {
@@ -21,7 +24,12 @@ describe("TV Sizes, Quality Normalization & New Status Seam", () => {
               SeriesId: "series-1",
               Type: "Episode",
               Size: 1048576,
-              MediaSources: [{ Size: 1048576, MediaStreams: [{ Type: "Video", Width: 1920, Height: 1080 }] }],
+              MediaSources: [
+                {
+                  Size: 1048576,
+                  MediaStreams: [{ Type: "Video", Width: 1920, Height: 1080 }],
+                },
+              ],
             },
           ],
         }),
@@ -38,7 +46,10 @@ describe("TV Sizes, Quality Normalization & New Status Seam", () => {
         ),
         `Unexpected URL: ${capturedUrl}`
       )
-      assert.equal(capturedHeaders.Authorization, 'MediaBrowser Token="secret-token"')
+      assert.equal(
+        capturedHeaders.Authorization,
+        'MediaBrowser Token="secret-token"'
+      )
       assert.equal(episodes.length, 1)
       assert.equal(episodes[0].Id, "ep-1")
     } finally {
@@ -48,7 +59,7 @@ describe("TV Sizes, Quality Normalization & New Status Seam", () => {
 
   it("buildMediaExternalLinks builds complete URLs for movies and tv", async () => {
     // Dynamic import to test export
-    const { buildMediaExternalLinks } = await import("../lib/audit") as any
+    const { buildMediaExternalLinks } = (await import("../lib/audit")) as any
 
     const movieLinks = buildMediaExternalLinks({
       mediaType: "movie",
@@ -65,7 +76,10 @@ describe("TV Sizes, Quality Normalization & New Status Seam", () => {
 
     assert.equal(movieLinks.imdb, "https://www.imdb.com/title/tt1375666/")
     assert.equal(movieLinks.letterboxd, "https://letterboxd.com/tmdb/27205/")
-    assert.equal(movieLinks.arr, "https://radarr.example.com/movie/inception-2010")
+    assert.equal(
+      movieLinks.arr,
+      "https://radarr.example.com/movie/inception-2010"
+    )
     assert.equal(
       movieLinks.jellyfin,
       "https://jf.example.com/web/index.html#!/details?id=jf-movie-1&serverId=srv-jf-1"
@@ -99,19 +113,30 @@ describe("TV Sizes, Quality Normalization & New Status Seam", () => {
       serviceUrl: "https://custom-radarr.internal/movie/custom",
       radarrBaseUrl: "https://radarr.example.com",
     })
-    assert.equal(customArrLinks.arr, "https://custom-radarr.internal/movie/custom")
+    assert.equal(
+      customArrLinks.arr,
+      "https://custom-radarr.internal/movie/custom"
+    )
   })
 
   it("normalizeVideoQuality normalizes structured streams and messy MKV track titles", async () => {
-    const { normalizeVideoQuality } = await import("../lib/audit") as any
+    const { normalizeVideoQuality } = (await import("../lib/audit")) as any
 
     // 1. Structured 1080p HEVC
-    const q1 = normalizeVideoQuality({ Width: 1920, Height: 1080, Codec: "hevc" })
+    const q1 = normalizeVideoQuality({
+      Width: 1920,
+      Height: 1080,
+      Codec: "hevc",
+    })
     assert.equal(q1.quality, "1080p")
     assert.equal(q1.qualityFull, "1080p HEVC")
 
     // 2. Structured 4K H.264
-    const q2 = normalizeVideoQuality({ Width: 3840, Height: 2160, Codec: "h264" })
+    const q2 = normalizeVideoQuality({
+      Width: 3840,
+      Height: 2160,
+      Codec: "h264",
+    })
     assert.equal(q2.quality, "4K")
     assert.equal(q2.qualityFull, "4K H.264")
 
@@ -122,7 +147,8 @@ describe("TV Sizes, Quality Normalization & New Status Seam", () => {
 
     // 4. Messy MKV title with embedded release group and codec string
     const q4 = normalizeVideoQuality({
-      DisplayTitle: "GalaxyRG265 - Inception.2010.1080p.BluRay.DDP5.1.x265.10bit-GalaxyRG265 - HEVC - SDR",
+      DisplayTitle:
+        "GalaxyRG265 - Inception.2010.1080p.BluRay.DDP5.1.x265.10bit-GalaxyRG265 - HEVC - SDR",
     })
     assert.equal(q4.quality, "1080p")
     assert.equal(q4.qualityFull, "1080p HEVC")
@@ -259,15 +285,22 @@ describe("TV Sizes, Quality Normalization & New Status Seam", () => {
     assert.equal(item.qualityFull, "1080p HEVC")
     assert.equal(item.imdbId, "tt0903747")
     assert.ok(item.externalLinks)
-    assert.equal(item.externalLinks.imdb, "https://www.imdb.com/title/tt0903747/")
+    assert.equal(
+      item.externalLinks.imdb,
+      "https://www.imdb.com/title/tt0903747/"
+    )
     assert.equal(item.externalLinks.letterboxd, undefined)
   })
 
   it("auditMedia classifies recent unplayed request as 'new' and computes newCount", async () => {
     const { auditMedia } = await import("../lib/audit")
 
-    const recentDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() // 2 days ago (< 30)
-    const oldDate = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString() // 40 days ago (>= 30)
+    const recentDate = new Date(
+      Date.now() - 2 * 24 * 60 * 60 * 1000
+    ).toISOString() // 2 days ago (< 30)
+    const oldDate = new Date(
+      Date.now() - 40 * 24 * 60 * 60 * 1000
+    ).toISOString() // 40 days ago (>= 30)
 
     const mockRequests = [
       {
@@ -326,7 +359,10 @@ describe("TV Sizes, Quality Normalization & New Status Seam", () => {
 
     const mockSeerrClient = {
       getRequests: async () => mockRequests,
-      getMediaDetails: async (_type: string, id: number) => ({ id, title: `Movie ${id}` }),
+      getMediaDetails: async (_type: string, id: number) => ({
+        id,
+        title: `Movie ${id}`,
+      }),
     } as any
 
     const mockJellyfinClient = {
@@ -357,6 +393,3 @@ describe("TV Sizes, Quality Normalization & New Status Seam", () => {
     assert.equal(report.ghostCount, 1)
   })
 })
-
-
-

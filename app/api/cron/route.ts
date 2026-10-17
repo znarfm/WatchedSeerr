@@ -13,8 +13,12 @@ export async function POST(request: Request) {
 
   try {
     const report = await auditMedia()
-    const safeCandidates = report.items.filter((i) => i.conflictStatus === "safe" && !i.isWhitelisted)
-    const ghostRequests = report.items.filter((i) => i.conflictStatus === "ghost" && !i.isWhitelisted)
+    const safeCandidates = report.items.filter(
+      (i) => i.conflictStatus === "safe" && !i.isWhitelisted
+    )
+    const ghostRequests = report.items.filter(
+      (i) => i.conflictStatus === "ghost" && !i.isWhitelisted
+    )
 
     const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL
     if (discordWebhookUrl) {
@@ -23,7 +27,10 @@ export async function POST(request: Request) {
           name: "Safe to Purge",
           value:
             safeCandidates.length > 0
-              ? safeCandidates.map((i) => `• **${i.title}** (${i.mediaType})`).slice(0, 10).join("\n")
+              ? safeCandidates
+                  .map((i) => `• **${i.title}** (${i.mediaType})`)
+                  .slice(0, 10)
+                  .join("\n")
               : "None",
           inline: false,
         },
@@ -31,7 +38,10 @@ export async function POST(request: Request) {
           name: "Ghost Requests",
           value:
             ghostRequests.length > 0
-              ? ghostRequests.map((i) => `• **${i.title}** (Req: ${i.requester.username})`).slice(0, 10).join("\n")
+              ? ghostRequests
+                  .map((i) => `• **${i.title}** (Req: ${i.requester.username})`)
+                  .slice(0, 10)
+                  .join("\n")
               : "None",
           inline: false,
         },

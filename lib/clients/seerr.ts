@@ -4,12 +4,18 @@ export class SeerrClient {
   private baseUrl: string
   private apiKey: string
 
-  constructor(baseUrl = process.env.SEERR_URL || "", apiKey = process.env.SEERR_API_KEY || "") {
+  constructor(
+    baseUrl = process.env.SEERR_URL || "",
+    apiKey = process.env.SEERR_API_KEY || ""
+  ) {
     this.baseUrl = baseUrl.replace(/\/+$/, "")
     this.apiKey = apiKey
   }
 
-  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  private async request<T>(
+    endpoint: string,
+    options?: RequestInit
+  ): Promise<T> {
     if (!this.baseUrl || !this.apiKey) {
       throw new Error("Seerr URL or API Key is missing")
     }

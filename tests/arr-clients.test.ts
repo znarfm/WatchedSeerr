@@ -15,7 +15,10 @@ describe("Arr Clients Seam", () => {
     let capturedMethod = ""
     let capturedHeaders: Record<string, string> = {}
 
-    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+    globalThis.fetch = (async (
+      url: string | URL | Request,
+      init?: RequestInit
+    ) => {
       capturedUrl = url.toString()
       capturedMethod = init?.method || "GET"
       capturedHeaders = (init?.headers as Record<string, string>) || {}
@@ -24,11 +27,16 @@ describe("Arr Clients Seam", () => {
         return {
           ok: true,
           status: 200,
-          json: async () => [{ id: 42, title: "Interstellar", tmdbId: 157336, hasFile: true }],
+          json: async () => [
+            { id: 42, title: "Interstellar", tmdbId: 157336, hasFile: true },
+          ],
         } as unknown as Response
       }
 
-      if (capturedUrl.includes("/api/v3/movie/42") && capturedMethod === "DELETE") {
+      if (
+        capturedUrl.includes("/api/v3/movie/42") &&
+        capturedMethod === "DELETE"
+      ) {
         return {
           ok: true,
           status: 200,
@@ -58,7 +66,10 @@ describe("Arr Clients Seam", () => {
     let capturedMethod = ""
     let capturedHeaders: Record<string, string> = {}
 
-    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+    globalThis.fetch = (async (
+      url: string | URL | Request,
+      init?: RequestInit
+    ) => {
       capturedUrl = url.toString()
       capturedMethod = init?.method || "GET"
       capturedHeaders = (init?.headers as Record<string, string>) || {}
@@ -68,12 +79,21 @@ describe("Arr Clients Seam", () => {
           ok: true,
           status: 200,
           json: async () => [
-            { id: 99, title: "Arcane", tmdbId: 94605, tvdbId: 374000, monitored: true },
+            {
+              id: 99,
+              title: "Arcane",
+              tmdbId: 94605,
+              tvdbId: 374000,
+              monitored: true,
+            },
           ],
         } as unknown as Response
       }
 
-      if (capturedUrl.includes("/api/v3/episodefile/1001") && capturedMethod === "DELETE") {
+      if (
+        capturedUrl.includes("/api/v3/episodefile/1001") &&
+        capturedMethod === "DELETE"
+      ) {
         return {
           ok: true,
           status: 200,

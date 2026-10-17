@@ -63,9 +63,7 @@ export function buildMediaExternalLinks(params: {
 
   const imdb = imdbId ? `https://www.imdb.com/title/${imdbId}/` : undefined
   const letterboxd =
-    mediaType === "movie"
-      ? `https://letterboxd.com/tmdb/${tmdbId}/`
-      : undefined
+    mediaType === "movie" ? `https://letterboxd.com/tmdb/${tmdbId}/` : undefined
 
   let arr: string | undefined
   if (serviceUrl) {
@@ -119,9 +117,17 @@ export function normalizeVideoQuality(
 
   let codec: string | undefined
   const rawCodec = (videoStream?.Codec || "").toLowerCase()
-  if (rawCodec === "hevc" || rawCodec === "h265" || /\b(hevc|x265|h\.?265)\b/i.test(display)) {
+  if (
+    rawCodec === "hevc" ||
+    rawCodec === "h265" ||
+    /\b(hevc|x265|h\.?265)\b/i.test(display)
+  ) {
     codec = "HEVC"
-  } else if (rawCodec === "h264" || rawCodec === "avc" || /\b(h\.?264|x264|avc)\b/i.test(display)) {
+  } else if (
+    rawCodec === "h264" ||
+    rawCodec === "avc" ||
+    /\b(h\.?264|x264|avc)\b/i.test(display)
+  ) {
     codec = "H.264"
   } else if (rawCodec === "av1" || /\bav1\b/i.test(display)) {
     codec = "AV1"
@@ -158,20 +164,35 @@ function calculateDaysAgo(dateStr?: string): number | null {
 function mapUserWatchStatus(
   item?: JellyfinItem,
   episodes?: JellyfinItem[]
-): { status: WatchStatus; progressPercent: number; episodesWatched?: number; totalEpisodes?: number } {
+): {
+  status: WatchStatus
+  progressPercent: number
+  episodesWatched?: number
+  totalEpisodes?: number
+} {
   if (episodes && episodes.length > 0) {
     const totalEpisodes = episodes.length
-    const watchedEpisodes = episodes.filter((ep) => ep.UserData?.Played || (ep.UserData?.PlayCount || 0) > 0).length
+    const watchedEpisodes = episodes.filter(
+      (ep) => ep.UserData?.Played || (ep.UserData?.PlayCount || 0) > 0
+    ).length
     const progressPercent = Math.round((watchedEpisodes / totalEpisodes) * 100)
 
     let status: WatchStatus = "unplayed"
     if (watchedEpisodes === totalEpisodes && totalEpisodes > 0) {
       status = "completed"
-    } else if (watchedEpisodes > 0 || episodes.some((ep) => (ep.UserData?.PlaybackPositionTicks || 0) > 0)) {
+    } else if (
+      watchedEpisodes > 0 ||
+      episodes.some((ep) => (ep.UserData?.PlaybackPositionTicks || 0) > 0)
+    ) {
       status = "in_progress"
     }
 
-    return { status, progressPercent, episodesWatched: watchedEpisodes, totalEpisodes }
+    return {
+      status,
+      progressPercent,
+      episodesWatched: watchedEpisodes,
+      totalEpisodes,
+    }
   }
 
   const userData = item?.UserData
@@ -183,7 +204,10 @@ function mapUserWatchStatus(
     return { status: "completed", progressPercent: 100 }
   }
 
-  if (typeof userData.PlayedPercentage === "number" && userData.PlayedPercentage > 0) {
+  if (
+    typeof userData.PlayedPercentage === "number" &&
+    userData.PlayedPercentage > 0
+  ) {
     const pct = Math.min(100, Math.round(userData.PlayedPercentage))
     return {
       status: pct > 90 ? "completed" : "in_progress",
@@ -195,7 +219,10 @@ function mapUserWatchStatus(
   const position = userData.PlaybackPositionTicks || 0
   if (runTime > 0 && position > 0) {
     const pct = Math.min(99, Math.round((position / runTime) * 100))
-    return { status: pct > 90 ? "completed" : "in_progress", progressPercent: pct }
+    return {
+      status: pct > 90 ? "completed" : "in_progress",
+      progressPercent: pct,
+    }
   }
 
   if ((userData.PlayCount || 0) > 0) {
@@ -205,20 +232,25 @@ function mapUserWatchStatus(
   return { status: "unplayed", progressPercent: 0 }
 }
 
-export async function auditMedia(options: AuditOptions = {}): Promise<AuditReport> {
+export async function auditMedia(
+  options: AuditOptions = {}
+): Promise<AuditReport> {
   const hasCustomOptions =
     options.seerrClient !== undefined ||
     options.jellyfinClient !== undefined ||
     options.ghostThresholdDays !== undefined ||
     options.conflictThresholdDays !== undefined
 
-  if (!hasCustomOptions && cachedAuditReport && Date.now() < cachedAuditReport.expiresAt) {
+  if (
+    !hasCustomOptions &&
+    cachedAuditReport &&
+    Date.now() < cachedAuditReport.expiresAt
+  ) {
     return cachedAuditReport.report
   }
 
   const ghostThreshold =
-    options.ghostThresholdDays ??
-    Number(process.env.GHOST_THRESHOLD_DAYS || 30)
+    options.ghostThresholdDays ?? Number(process.env.GHOST_THRESHOLD_DAYS || 30)
   const conflictThreshold =
     options.conflictThresholdDays ??
     Number(process.env.CONFLICT_THRESHOLD_DAYS || 60)
@@ -227,31 +259,38 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
   const jellyfin = options.jellyfinClient || new JellyfinClient()
 
   // 1. Concurrent bulk fetch from Seerr & Jellyfin
-  const [requests, jellyfinUsers, allLibraryItems, seerrUsers, allEpisodes] = await Promise.all([
-    seerr.getRequests(200, "all"),
-    jellyfin.getUsers(),
-    jellyfin.getAllLibraryItems().catch(() => [] as JellyfinItem[]),
-    typeof (seerr as any).getUsers === "function"
-      ? (seerr as any).getUsers().catch(() => [] as SeerrUser[])
-      : Promise.resolve([] as SeerrUser[]),
-    typeof (jellyfin as any).getAllEpisodesMetadata === "function"
-      ? (jellyfin as any).getAllEpisodesMetadata().catch(() => [] as JellyfinItem[])
-      : Promise.resolve([] as JellyfinItem[]),
-  ])
+  const [requests, jellyfinUsers, allLibraryItems, seerrUsers, allEpisodes] =
+    await Promise.all([
+      seerr.getRequests(200, "all"),
+      jellyfin.getUsers(),
+      jellyfin.getAllLibraryItems().catch(() => [] as JellyfinItem[]),
+      typeof (seerr as any).getUsers === "function"
+        ? (seerr as any).getUsers().catch(() => [] as SeerrUser[])
+        : Promise.resolve([] as SeerrUser[]),
+      typeof (jellyfin as any).getAllEpisodesMetadata === "function"
+        ? (jellyfin as any)
+            .getAllEpisodesMetadata()
+            .catch(() => [] as JellyfinItem[])
+        : Promise.resolve([] as JellyfinItem[]),
+    ])
 
   // Build series episode stats for size and quality aggregation
-  const seriesEpisodeStats = new Map<string, { totalSize: number; videoStream?: any }>()
+  const seriesEpisodeStats = new Map<
+    string,
+    { totalSize: number; videoStream?: any }
+  >()
   for (const ep of allEpisodes) {
     if (!ep.SeriesId) continue
     const current = seriesEpisodeStats.get(ep.SeriesId) || { totalSize: 0 }
     const epSize = ep.Size ?? ep.MediaSources?.[0]?.Size ?? 0
     current.totalSize += epSize
     if (!current.videoStream) {
-      current.videoStream = ep.MediaSources?.[0]?.MediaStreams?.find((s: any) => s.Type === "Video")
+      current.videoStream = ep.MediaSources?.[0]?.MediaStreams?.find(
+        (s: any) => s.Type === "Video"
+      )
     }
     seriesEpisodeStats.set(ep.SeriesId, current)
   }
-
 
   // 2. Index Jellyfin library items by exact TMDB ID string
   const jfByTmdb = new Map<string, JellyfinItem>()
@@ -303,7 +342,8 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
         const key = `${mediaType}-${tmdbId}`
         try {
           const details = await seerr.getMediaDetails(mediaType, tmdbId)
-          const title = details.title || (details as any).name || `TMDB ${tmdbId}`
+          const title =
+            details.title || (details as any).name || `TMDB ${tmdbId}`
           const yearStr = details.releaseDate || (details as any).firstAirDate
           const year = yearStr ? new Date(yearStr).getFullYear() : undefined
           const genres = details.genres?.map((g) => g.name).filter(Boolean)
@@ -399,17 +439,24 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
     const year = jellyfinItem.ProductionYear || cached?.year
     const posterPath = cached?.posterPath
     const overview = jellyfinItem.Overview || cached?.overview
-    const genres = (jellyfinItem.Genres && jellyfinItem.Genres.length > 0)
-      ? jellyfinItem.Genres
-      : cached?.genres
+    const genres =
+      jellyfinItem.Genres && jellyfinItem.Genres.length > 0
+        ? jellyfinItem.Genres
+        : cached?.genres
     const jellyfinImageTag = jellyfinItem.ImageTags?.Primary
 
     // Quality & video stream resolution
-    const epStats = jellyfinItem ? seriesEpisodeStats.get(jellyfinItem.Id) : undefined
+    const epStats = jellyfinItem
+      ? seriesEpisodeStats.get(jellyfinItem.Id)
+      : undefined
     const videoStream =
-      jellyfinItem?.MediaSources?.[0]?.MediaStreams?.find((s) => s.Type === "Video") ||
-      epStats?.videoStream
-    const { quality, qualityFull } = normalizeVideoQuality(videoStream, req.is4k)
+      jellyfinItem?.MediaSources?.[0]?.MediaStreams?.find(
+        (s) => s.Type === "Video"
+      ) || epStats?.videoStream
+    const { quality, qualityFull } = normalizeVideoQuality(
+      videoStream,
+      req.is4k
+    )
     const sizeBytes =
       jellyfinItem?.Size ??
       jellyfinItem?.MediaSources?.[0]?.Size ??
@@ -450,7 +497,9 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
     let requesterState: UserPlaybackState = {
       userId: matchedJellyfinUser?.Id || "unknown",
       username: requesterUsername,
-      avatarUrl: matchedJellyfinUser ? jfAvatarMap.get(matchedJellyfinUser.Id) : undefined,
+      avatarUrl: matchedJellyfinUser
+        ? jfAvatarMap.get(matchedJellyfinUser.Id)
+        : undefined,
       isRequester: true,
       status: "unplayed",
       progressPercent: 0,
@@ -470,7 +519,10 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
 
         const lastPlayed = userItem.UserData?.LastPlayedDate
         if (lastPlayed) {
-          if (!mostRecentPlayedDate || new Date(lastPlayed) > new Date(mostRecentPlayedDate)) {
+          if (
+            !mostRecentPlayedDate ||
+            new Date(lastPlayed) > new Date(mostRecentPlayedDate)
+          ) {
             mostRecentPlayedDate = lastPlayed
           }
         }
@@ -506,7 +558,8 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
     const activeNonRequesters = householdStates.filter(
       (h) =>
         h.status === "in_progress" ||
-        (h.lastPlayedDate && (calculateDaysAgo(h.lastPlayedDate) ?? 999) <= conflictThreshold)
+        (h.lastPlayedDate &&
+          (calculateDaysAgo(h.lastPlayedDate) ?? 999) <= conflictThreshold)
     )
 
     if (activeNonRequesters.length > 0) {
@@ -577,8 +630,12 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
 
   const safeCount = auditItems.filter((i) => i.conflictStatus === "safe").length
   const newCount = auditItems.filter((i) => i.conflictStatus === "new").length
-  const conflictCount = auditItems.filter((i) => i.conflictStatus === "conflict").length
-  const ghostCount = auditItems.filter((i) => i.conflictStatus === "ghost").length
+  const conflictCount = auditItems.filter(
+    (i) => i.conflictStatus === "conflict"
+  ).length
+  const ghostCount = auditItems.filter(
+    (i) => i.conflictStatus === "ghost"
+  ).length
   const whitelistedCount = auditItems.filter((i) => i.isWhitelisted).length
 
   const report: AuditReport = {

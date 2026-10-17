@@ -25,7 +25,10 @@ export interface SonarrEpisodeFile {
 export class SonarrClient {
   private baseUrl: string
   private apiKey: string
-  private static seriesCache: { data: SonarrSeries[]; expiresAt: number } | null = null
+  private static seriesCache: {
+    data: SonarrSeries[]
+    expiresAt: number
+  } | null = null
 
   constructor(
     baseUrl = process.env.SONARR_URL || "",
@@ -39,7 +42,10 @@ export class SonarrClient {
     return !!(this.baseUrl && this.apiKey)
   }
 
-  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  private async request<T>(
+    endpoint: string,
+    options?: RequestInit
+  ): Promise<T> {
     if (!this.baseUrl || !this.apiKey) {
       throw new Error("Sonarr URL or API Key is missing")
     }
@@ -63,7 +69,11 @@ export class SonarrClient {
 
   async getAllSeries(forceFresh = false): Promise<SonarrSeries[]> {
     const now = Date.now()
-    if (!forceFresh && SonarrClient.seriesCache && SonarrClient.seriesCache.expiresAt > now) {
+    if (
+      !forceFresh &&
+      SonarrClient.seriesCache &&
+      SonarrClient.seriesCache.expiresAt > now
+    ) {
       return SonarrClient.seriesCache.data
     }
 
@@ -83,7 +93,9 @@ export class SonarrClient {
   }
 
   async getEpisodeFiles(seriesId: number): Promise<SonarrEpisodeFile[]> {
-    return this.request<SonarrEpisodeFile[]>(`/api/v3/episodefile?seriesId=${seriesId}`)
+    return this.request<SonarrEpisodeFile[]>(
+      `/api/v3/episodefile?seriesId=${seriesId}`
+    )
   }
 
   async deleteEpisodeFile(episodeFileId: number): Promise<boolean> {

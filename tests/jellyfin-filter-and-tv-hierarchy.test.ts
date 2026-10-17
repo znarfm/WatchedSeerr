@@ -75,9 +75,7 @@ describe("Jellyfin Filter & TV Hierarchy Seam", () => {
       },
     ]
 
-    const mockJellyfinUsers: JellyfinUser[] = [
-      { Id: "u-alice", Name: "alice" },
-    ]
+    const mockJellyfinUsers: JellyfinUser[] = [{ Id: "u-alice", Name: "alice" }]
 
     const mockLibraryItems: JellyfinItem[] = [
       {
@@ -125,7 +123,10 @@ describe("Jellyfin Filter & TV Hierarchy Seam", () => {
     let capturedMethod = ""
 
     const originalFetch = globalThis.fetch
-    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+    globalThis.fetch = (async (
+      url: string | URL | Request,
+      init?: RequestInit
+    ) => {
       capturedUrl = url.toString()
       capturedMethod = init?.method || "GET"
 
@@ -133,11 +134,16 @@ describe("Jellyfin Filter & TV Hierarchy Seam", () => {
         return {
           ok: true,
           status: 200,
-          json: async () => [{ id: 88, title: "Breaking Bad", tmdbId: 1396, tvdbId: 81189 }],
+          json: async () => [
+            { id: 88, title: "Breaking Bad", tmdbId: 1396, tvdbId: 81189 },
+          ],
         } as unknown as Response
       }
 
-      if (capturedUrl.includes("/api/v3/episodefile/5001") && capturedMethod === "DELETE") {
+      if (
+        capturedUrl.includes("/api/v3/episodefile/5001") &&
+        capturedMethod === "DELETE"
+      ) {
         return {
           ok: true,
           status: 200,

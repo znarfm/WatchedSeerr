@@ -45,7 +45,9 @@ export interface MediaDetailSheetProps {
 
 export function resolveExternalLinks(item: AuditMediaItem): MediaExternalLinks {
   const fallback: MediaExternalLinks = {
-    imdb: item.imdbId ? `https://www.imdb.com/title/${item.imdbId}/` : undefined,
+    imdb: item.imdbId
+      ? `https://www.imdb.com/title/${item.imdbId}/`
+      : undefined,
     letterboxd:
       item.mediaType === "movie"
         ? `https://letterboxd.com/tmdb/${item.tmdbId}/`
@@ -81,10 +83,10 @@ export function MediaDetailSheetBody({
           : ""
       }`
     : selectedItem.posterPath
-    ? `/api/proxy/poster?posterPath=${encodeURIComponent(selectedItem.posterPath)}`
-    : selectedItem.tmdbId
-    ? `/api/proxy/poster?tmdbId=${selectedItem.tmdbId}&mediaType=${selectedItem.mediaType}`
-    : null
+      ? `/api/proxy/poster?posterPath=${encodeURIComponent(selectedItem.posterPath)}`
+      : selectedItem.tmdbId
+        ? `/api/proxy/poster?tmdbId=${selectedItem.tmdbId}&mediaType=${selectedItem.mediaType}`
+        : null
 
   const formattedRequested = selectedItem.requestedAt
     ? new Date(selectedItem.requestedAt).toLocaleDateString()
@@ -100,48 +102,55 @@ export function MediaDetailSheetBody({
     selectedItem.conflictStatus === "safe"
       ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
       : selectedItem.conflictStatus === "new"
-      ? "bg-sky-500/10 border-sky-500/30 text-sky-400"
-      : selectedItem.conflictStatus === "conflict"
-      ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
-      : "bg-rose-500/10 border-rose-500/30 text-rose-400"
+        ? "bg-sky-500/10 border-sky-500/30 text-sky-400"
+        : selectedItem.conflictStatus === "conflict"
+          ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
+          : "bg-rose-500/10 border-rose-500/30 text-rose-400"
 
   return (
     <>
       {/* Pinned Header */}
-      <SheetHeader className="shrink-0 border-b border-border p-5 pr-10 text-left bg-popover space-y-3">
+      <SheetHeader className="shrink-0 space-y-3 border-b border-border bg-popover p-5 pr-10 text-left">
         <div className="flex gap-4">
-          <div className="w-20 h-28 bg-muted flex items-center justify-center border border-border shrink-0 overflow-hidden">
+          <div className="flex h-28 w-20 shrink-0 items-center justify-center overflow-hidden border border-border bg-muted">
             {posterSrc ? (
               <img
                 src={posterSrc}
                 alt={selectedItem.title}
-                className="w-full h-full object-cover"
+                className="h-full w-full object-cover"
               />
             ) : (
-              <span className="text-muted-foreground text-[10px] uppercase font-mono">
+              <span className="font-mono text-[10px] text-muted-foreground uppercase">
                 {selectedItem.mediaType}
               </span>
             )}
           </div>
 
-          <div className="flex-1 min-w-0">
-            <SheetTitle className="text-base font-semibold leading-snug line-clamp-2">
+          <div className="min-w-0 flex-1">
+            <SheetTitle className="line-clamp-2 text-base leading-snug font-semibold">
               {selectedItem.title}
             </SheetTitle>
-            <SheetDescription className="text-xs text-muted-foreground mt-1">
+            <SheetDescription className="mt-1 text-xs text-muted-foreground">
               {selectedItem.year && <span>{selectedItem.year} • </span>}
               <span className="uppercase">{selectedItem.mediaType}</span>
               {formattedSize && <span> • {formattedSize}</span>}
             </SheetDescription>
 
-            <div className="flex flex-wrap gap-1 mt-2">
+            <div className="mt-2 flex flex-wrap gap-1">
               {(selectedItem.qualityFull || selectedItem.quality) && (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-mono">
+                <Badge
+                  variant="secondary"
+                  className="px-1.5 py-0 font-mono text-[10px]"
+                >
                   {selectedItem.qualityFull || selectedItem.quality}
                 </Badge>
               )}
               {selectedItem.genres?.map((g) => (
-                <Badge key={g} variant="outline" className="text-[10px] px-1.5 py-0">
+                <Badge
+                  key={g}
+                  variant="outline"
+                  className="px-1.5 py-0 text-[10px]"
+                >
                   {g}
                 </Badge>
               ))}
@@ -156,7 +165,7 @@ export function MediaDetailSheetBody({
               href={links.jellyfin}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium border border-border bg-muted/40 hover:bg-muted text-foreground transition-colors"
+              className="inline-flex items-center gap-1 border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
             >
               <span>Jellyfin</span>
               <IconExternalLink className="size-3" />
@@ -167,7 +176,7 @@ export function MediaDetailSheetBody({
               href={links.seerr}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium border border-border bg-muted/40 hover:bg-muted text-foreground transition-colors"
+              className="inline-flex items-center gap-1 border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
             >
               <span>Seerr</span>
               <IconExternalLink className="size-3" />
@@ -178,7 +187,7 @@ export function MediaDetailSheetBody({
               href={links.arr}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium border border-border bg-muted/40 hover:bg-muted text-foreground transition-colors"
+              className="inline-flex items-center gap-1 border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
             >
               <span>Radarr</span>
               <IconExternalLink className="size-3" />
@@ -189,7 +198,7 @@ export function MediaDetailSheetBody({
               href={links.arr}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium border border-border bg-muted/40 hover:bg-muted text-foreground transition-colors"
+              className="inline-flex items-center gap-1 border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
             >
               <span>Sonarr</span>
               <IconExternalLink className="size-3" />
@@ -200,7 +209,7 @@ export function MediaDetailSheetBody({
               href={links.imdb}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium border border-border bg-muted/40 hover:bg-muted text-foreground transition-colors"
+              className="inline-flex items-center gap-1 border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
             >
               <span>IMDb</span>
               <IconExternalLink className="size-3" />
@@ -211,7 +220,7 @@ export function MediaDetailSheetBody({
               href={links.letterboxd}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium border border-border bg-muted/40 hover:bg-muted text-foreground transition-colors"
+              className="inline-flex items-center gap-1 border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
             >
               <span>Letterboxd</span>
               <IconExternalLink className="size-3" />
@@ -221,33 +230,35 @@ export function MediaDetailSheetBody({
       </SheetHeader>
 
       {/* Scrollable Body */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-5">
+      <div className="flex-1 space-y-5 overflow-y-auto p-5">
         {/* 3-Column Metadata Strip */}
         <div className="grid grid-cols-3 gap-2">
-          <div className="bg-muted/20 border border-border p-2.5 text-center">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+          <div className="border border-border bg-muted/20 p-2.5 text-center">
+            <div className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
               Requested
             </div>
-            <div className="text-xs font-mono font-medium mt-1 truncate">
+            <div className="mt-1 truncate font-mono text-xs font-medium">
               {formattedRequested}
             </div>
           </div>
-          <div className="bg-muted/20 border border-border p-2.5 text-center">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+          <div className="border border-border bg-muted/20 p-2.5 text-center">
+            <div className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
               Inactive
             </div>
-            <div className="text-xs font-mono font-medium mt-1 truncate">
+            <div className="mt-1 truncate font-mono text-xs font-medium">
               {formattedInactive}
             </div>
           </div>
-          <div className="bg-muted/20 border border-border p-2.5 text-center">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+          <div className="border border-border bg-muted/20 p-2.5 text-center">
+            <div className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
               Protection
             </div>
             <div
               className={cn(
-                "text-xs font-semibold mt-1 truncate",
-                selectedItem.isWhitelisted ? "text-emerald-400" : "text-muted-foreground"
+                "mt-1 truncate text-xs font-semibold",
+                selectedItem.isWhitelisted
+                  ? "text-emerald-400"
+                  : "text-muted-foreground"
               )}
             >
               {selectedItem.isWhitelisted ? "Whitelisted" : "Unprotected"}
@@ -256,8 +267,8 @@ export function MediaDetailSheetBody({
         </div>
 
         {/* Retention Status Banner */}
-        <div className={cn("p-3 text-xs border", statusBannerClass)}>
-          <span className="font-semibold uppercase tracking-wider block mb-1">
+        <div className={cn("border p-3 text-xs", statusBannerClass)}>
+          <span className="mb-1 block font-semibold tracking-wider uppercase">
             {selectedItem.conflictStatus} Status
           </span>
           {selectedItem.conflictReason}
@@ -266,10 +277,10 @@ export function MediaDetailSheetBody({
         {/* Synopsis Overview */}
         {selectedItem.overview && (
           <div className="space-y-1">
-            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <h4 className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
               Overview
             </h4>
-            <p className="text-xs text-foreground/90 leading-relaxed bg-muted/20 p-2.5 border border-border">
+            <p className="border border-border bg-muted/20 p-2.5 text-xs leading-relaxed text-foreground/90">
               {selectedItem.overview}
             </p>
           </div>
@@ -277,13 +288,13 @@ export function MediaDetailSheetBody({
 
         {/* Household Playback Breakdown */}
         <div>
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          <h4 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
             Household Playback Breakdown
           </h4>
           <div className="space-y-3">
-            <Card className="p-3 bg-muted/40 border border-primary/40 space-y-2">
+            <Card className="space-y-2 border border-primary/40 bg-muted/40 p-3">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-medium flex items-center gap-2">
+                <span className="flex items-center gap-2 font-medium">
                   <Avatar className="size-5 shrink-0">
                     {selectedItem.requester.requesterAvatarUrl && (
                       <AvatarImage
@@ -291,7 +302,7 @@ export function MediaDetailSheetBody({
                         alt={selectedItem.requester.username}
                       />
                     )}
-                    <AvatarFallback className="text-[10px] uppercase font-mono">
+                    <AvatarFallback className="font-mono text-[10px] uppercase">
                       {selectedItem.requester.username.slice(0, 2)}
                     </AvatarFallback>
                   </Avatar>
@@ -310,7 +321,9 @@ export function MediaDetailSheetBody({
                 <span>
                   Last played:{" "}
                   {selectedItem.requesterState.lastPlayedDate
-                    ? new Date(selectedItem.requesterState.lastPlayedDate).toLocaleDateString()
+                    ? new Date(
+                        selectedItem.requesterState.lastPlayedDate
+                      ).toLocaleDateString()
                     : "Never"}
                 </span>
               </div>
@@ -319,24 +332,23 @@ export function MediaDetailSheetBody({
             {selectedItem.householdStates.map((user) => (
               <Card
                 key={user.userId}
-                className="p-3 bg-muted/20 border border-border space-y-2"
+                className="space-y-2 border border-border bg-muted/20 p-3"
               >
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium flex items-center gap-2">
+                  <span className="flex items-center gap-2 font-medium">
                     <Avatar className="size-5 shrink-0">
                       {user.avatarUrl && (
-                        <AvatarImage
-                          src={user.avatarUrl}
-                          alt={user.username}
-                        />
+                        <AvatarImage src={user.avatarUrl} alt={user.username} />
                       )}
-                      <AvatarFallback className="text-[10px] uppercase font-mono">
+                      <AvatarFallback className="font-mono text-[10px] uppercase">
                         {user.username.slice(0, 2)}
                       </AvatarFallback>
                     </Avatar>
                     {user.username}
                   </span>
-                  <span className="font-mono text-xs">{user.progressPercent}%</span>
+                  <span className="font-mono text-xs">
+                    {user.progressPercent}%
+                  </span>
                 </div>
                 <Progress value={user.progressPercent} className="h-1.5" />
                 <div className="flex justify-between text-[11px] text-muted-foreground">
@@ -355,7 +367,7 @@ export function MediaDetailSheetBody({
       </div>
 
       {/* Pinned Footer */}
-      <SheetFooter className="shrink-0 border-t border-border p-4 bg-popover flex-row items-center justify-between gap-2 mt-0">
+      <SheetFooter className="mt-0 shrink-0 flex-row items-center justify-between gap-2 border-t border-border bg-popover p-4">
         <Button
           variant="outline"
           size="sm"
@@ -386,9 +398,11 @@ export function MediaDetailSheet({
   onDeleteCandidateChange,
 }: MediaDetailSheetProps) {
   const [isPending, startTransition] = React.useTransition()
-  const [internalCandidate, setInternalCandidate] = React.useState<DeleteTarget | null>(null)
+  const [internalCandidate, setInternalCandidate] =
+    React.useState<DeleteTarget | null>(null)
 
-  const candidate = deleteCandidate !== undefined ? deleteCandidate : internalCandidate
+  const candidate =
+    deleteCandidate !== undefined ? deleteCandidate : internalCandidate
 
   const setCandidate = (c: DeleteTarget | null) => {
     if (onDeleteCandidateChange) {
@@ -413,7 +427,9 @@ export function MediaDetailSheet({
           onItemUpdated(targetItem.id, { isWhitelisted: nextWhitelisted })
           try {
             toast.add({
-              title: nextWhitelisted ? "Media Whitelisted" : "Removed from Whitelist",
+              title: nextWhitelisted
+                ? "Media Whitelisted"
+                : "Removed from Whitelist",
               description: targetItem.title,
               type: "success",
             })
@@ -425,8 +441,8 @@ export function MediaDetailSheet({
               typeof errVal === "string"
                 ? errVal
                 : errVal
-                ? JSON.stringify(errVal)
-                : "Failed to update whitelist status"
+                  ? JSON.stringify(errVal)
+                  : "Failed to update whitelist status"
             toast.add({
               title: "Whitelist Update Failed",
               description,
@@ -489,8 +505,8 @@ export function MediaDetailSheet({
               typeof errVal === "string"
                 ? errVal
                 : errVal
-                ? JSON.stringify(errVal)
-                : "Failed to purge media"
+                  ? JSON.stringify(errVal)
+                  : "Failed to purge media"
             toast.add({
               title: "Purge Failed",
               description,
@@ -516,7 +532,7 @@ export function MediaDetailSheet({
         {selectedItem && (
           <SheetContent
             side="right"
-            className="w-full sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col"
+            className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-md"
           >
             <MediaDetailSheetBody
               selectedItem={selectedItem}
@@ -529,7 +545,10 @@ export function MediaDetailSheet({
       </Sheet>
 
       {/* Confirmation Dialog for Purge */}
-      <Dialog open={!!candidate} onOpenChange={(open) => !open && setCandidate(null)}>
+      <Dialog
+        open={!!candidate}
+        onOpenChange={(open) => !open && setCandidate(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>

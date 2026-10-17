@@ -9,7 +9,12 @@ import {
 } from "../lib/actions"
 import { SeerrClient } from "../lib/clients/seerr"
 import { JellyfinClient } from "../lib/clients/jellyfin"
-import type { SeerrRequest, SeerrUser, JellyfinItem, JellyfinUser } from "../types"
+import type {
+  SeerrRequest,
+  SeerrUser,
+  JellyfinItem,
+  JellyfinUser,
+} from "../types"
 
 describe("User Reconciliation and Watch Status Seam", () => {
   it("SeerrClient.getUsers fetches /api/v1/user with take parameter", async () => {
@@ -22,9 +27,7 @@ describe("User Reconciliation and Watch Status Seam", () => {
         ok: true,
         status: 200,
         json: async () => ({
-          results: [
-            { id: 1, displayName: "Meinard", jellyfinUserId: "u-1" },
-          ],
+          results: [{ id: 1, displayName: "Meinard", jellyfinUserId: "u-1" }],
         }),
       } as unknown as Response
     }) as typeof globalThis.fetch
@@ -145,7 +148,8 @@ describe("User Reconciliation and Watch Status Seam", () => {
     const mockJellyfin = {
       getUsers: async () => mockJellyfinUsers,
       getAllLibraryItems: async () => mockLibraryItems,
-      getAllUserItems: async (userId: string) => (userId === "unard1234" ? mockUserItems : []),
+      getAllUserItems: async (userId: string) =>
+        userId === "unard1234" ? mockUserItems : [],
     } as unknown as JellyfinClient
 
     const report = await auditMedia({
@@ -161,19 +165,33 @@ describe("User Reconciliation and Watch Status Seam", () => {
     assert.equal(item.requesterState.username, "Meinard")
     assert.equal(item.requesterState.userId, "unard1234")
     assert.equal(item.requesterState.status, "completed")
-    assert.equal(item.requesterState.avatarUrl, "/api/proxy/avatar?userId=unard1234&tag=tag-nard")
-    assert.equal(item.requester.requesterAvatarUrl, "/api/proxy/avatar?userId=unard1234&tag=tag-nard")
+    assert.equal(
+      item.requesterState.avatarUrl,
+      "/api/proxy/avatar?userId=unard1234&tag=tag-nard"
+    )
+    assert.equal(
+      item.requester.requesterAvatarUrl,
+      "/api/proxy/avatar?userId=unard1234&tag=tag-nard"
+    )
 
     // Household states should have canonical display names and avatar presence
     const famState = item.householdStates.find((h) => h.userId === "ufam5678")
     assert.ok(famState, "Family user exists in householdStates")
     assert.equal(famState.username, "Family")
-    assert.equal(famState.avatarUrl, undefined, "fam has no PrimaryImageTag so avatarUrl is undefined")
+    assert.equal(
+      famState.avatarUrl,
+      undefined,
+      "fam has no PrimaryImageTag so avatarUrl is undefined"
+    )
 
     const jennaState = item.householdStates.find((h) => h.userId === "ujenna")
     assert.ok(jennaState, "jenna user exists in householdStates")
     assert.equal(jennaState.username, "jenna")
-    assert.equal(jennaState.avatarUrl, undefined, "jenna has no PrimaryImageTag so avatarUrl is undefined")
+    assert.equal(
+      jennaState.avatarUrl,
+      undefined,
+      "jenna has no PrimaryImageTag so avatarUrl is undefined"
+    )
   })
 
   it("marks movie with PlayCount > 0 and Played: false as completed (100%) and safe", async () => {
@@ -196,9 +214,7 @@ describe("User Reconciliation and Watch Status Seam", () => {
       },
     ]
 
-    const mockJellyfinUsers: JellyfinUser[] = [
-      { Id: "u-alice", Name: "alice" },
-    ]
+    const mockJellyfinUsers: JellyfinUser[] = [{ Id: "u-alice", Name: "alice" }]
 
     const mockLibraryItems: JellyfinItem[] = [
       {
@@ -225,10 +241,14 @@ describe("User Reconciliation and Watch Status Seam", () => {
     ]
 
     const mockSeerr = {
-      getUsers: async () => [{ id: 1, username: "alice", displayName: "Alice D" }],
+      getUsers: async () => [
+        { id: 1, username: "alice", displayName: "Alice D" },
+      ],
       getRequests: async () => mockRequests,
       getMediaDetails: async () => {
-        throw new Error("Should not be called when jellyfinItem.Name is present")
+        throw new Error(
+          "Should not be called when jellyfinItem.Name is present"
+        )
       },
     } as unknown as SeerrClient
 
@@ -431,7 +451,11 @@ describe("User Reconciliation and Watch Status Seam", () => {
     globalThis.fetch = (async (url: string | URL | Request) => {
       const urlStr = url.toString()
       if (urlStr.includes("/api/v1/user")) {
-        return { ok: true, status: 200, json: async () => ({ results: [] }) } as Response
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ results: [] }),
+        } as Response
       }
       if (urlStr.includes("/api/v1/request")) {
         fetchCount++
@@ -461,7 +485,14 @@ describe("User Reconciliation and Watch Status Seam", () => {
           ok: true,
           status: 200,
           json: async () => ({
-            Items: [{ Id: "jf-1000", Name: "Item 1000", Type: "Movie", ProviderIds: { Tmdb: "1000" } }],
+            Items: [
+              {
+                Id: "jf-1000",
+                Name: "Item 1000",
+                Type: "Movie",
+                ProviderIds: { Tmdb: "1000" },
+              },
+            ],
           }),
         } as Response
       }
@@ -526,7 +557,9 @@ describe("User Reconciliation and Watch Status Seam", () => {
       const res = await getSeriesEpisodesAction("show-123", 1399, "user-456")
       assert.equal(res.success, true)
       assert.ok(
-        capturedUrl.includes("/Shows/show-123/Episodes?userId=user-456&Fields=UserData,RunTimeTicks")
+        capturedUrl.includes(
+          "/Shows/show-123/Episodes?userId=user-456&Fields=UserData,RunTimeTicks"
+        )
       )
       assert.equal(res.episodes.length, 1)
       assert.equal(res.episodes[0].status, "completed")
@@ -542,17 +575,29 @@ describe("User Reconciliation and Watch Status Seam", () => {
     globalThis.fetch = (async (url: string | URL | Request) => {
       const urlStr = url.toString()
       if (urlStr.includes("/api/v1/user")) {
-        return { ok: true, status: 200, json: async () => ({ results: [] }) } as Response
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ results: [] }),
+        } as Response
       }
       if (urlStr.includes("/api/v1/request")) {
         fetchCount++
-        return { ok: true, status: 200, json: async () => ({ results: [] }) } as Response
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ results: [] }),
+        } as Response
       }
       if (urlStr.includes("/Users")) {
         return { ok: true, status: 200, json: async () => [] } as Response
       }
       if (urlStr.includes("/Items")) {
-        return { ok: true, status: 200, json: async () => ({ Items: [] }) } as Response
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ Items: [] }),
+        } as Response
       }
       return { ok: false, status: 404 } as Response
     }) as typeof globalThis.fetch
@@ -580,5 +625,3 @@ describe("User Reconciliation and Watch Status Seam", () => {
     }
   })
 })
-
-

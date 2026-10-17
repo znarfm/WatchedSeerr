@@ -1,8 +1,4 @@
-import type {
-  JellyfinItem,
-  JellyfinItemsResponse,
-  JellyfinUser,
-} from "@/types"
+import type { JellyfinItem, JellyfinItemsResponse, JellyfinUser } from "@/types"
 
 export class JellyfinClient {
   private baseUrl: string
@@ -16,7 +12,10 @@ export class JellyfinClient {
     this.apiKey = apiKey
   }
 
-  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  private async request<T>(
+    endpoint: string,
+    options?: RequestInit
+  ): Promise<T> {
     if (!this.baseUrl || !this.apiKey) {
       throw new Error("Jellyfin URL or API Key is missing")
     }
@@ -62,8 +61,13 @@ export class JellyfinClient {
     return res.Items || []
   }
 
-  async getEpisodes(seriesId: string, userId?: string): Promise<JellyfinItem[]> {
-    const userParam = userId ? `?userId=${userId}&Fields=UserData,RunTimeTicks` : "?Fields=UserData,RunTimeTicks"
+  async getEpisodes(
+    seriesId: string,
+    userId?: string
+  ): Promise<JellyfinItem[]> {
+    const userParam = userId
+      ? `?userId=${userId}&Fields=UserData,RunTimeTicks`
+      : "?Fields=UserData,RunTimeTicks"
     const res = await this.request<JellyfinItemsResponse>(
       `/Shows/${seriesId}/Episodes${userParam}`
     )
@@ -81,4 +85,3 @@ export class JellyfinClient {
     return res.Items || []
   }
 }
-
