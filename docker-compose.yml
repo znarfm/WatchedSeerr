@@ -1,0 +1,21 @@
+services:
+  watchedseerr:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: watchedseerr
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - JELLYFIN_URL=http://jellyfin:8096
+      - JELLYFIN_API_KEY=your_jellyfin_api_key
+      - SEERR_URL=http://overseerr:5055
+      - SEERR_API_KEY=your_seerr_api_key
+      - DISCORD_WEBHOOK_URL=
+      - CRON_SECRET=your_secure_cron_token
+      - GHOST_THRESHOLD_DAYS=30
+      - CONFLICT_THRESHOLD_DAYS=60
+    volumes:
+      - ./data:/app/data

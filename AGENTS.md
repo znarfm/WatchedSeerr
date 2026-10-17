@@ -7,3 +7,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Tool Documentation (llms.txt)
+
+Fetch for latest info/specs before implementation if needed:
+- Drizzle ORM: https://orm.drizzle.team/llms.txt
+- TanStack Table: https://tanstack.com/table/llms.txt
+- Tailwind CSS: https://tailwindcss.com/docs/llms.txt
+- shadcn/ui: https://ui.shadcn.com/llms.txt
+- React: https://react.dev/llms.txt
+
