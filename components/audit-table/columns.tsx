@@ -1,6 +1,7 @@
 import type { Column, ColumnDef, RowData } from "@tanstack/react-table"
 import type { AuditMediaItem } from "@/types"
 import { formatMediaSize } from "@/lib/utils"
+import { cn } from "cn"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -47,6 +48,13 @@ export interface TableMeta {
   onToggleExpand?: (item: AuditMediaItem) => void
   loadingEpisodes?: Record<string, boolean>
   isPending: boolean
+}
+
+function codecClass(q?: string) {
+  if (/hevc|h\.?265/i.test(q ?? "")) return "border border-emerald-500/30 bg-emerald-500/15 text-emerald-400"
+  if (/av1/i.test(q ?? "")) return "border border-violet-500/30 bg-violet-500/15 text-violet-400"
+  if (/h\.?264|avc/i.test(q ?? "")) return "border border-amber-500/30 bg-amber-500/15 text-amber-400"
+  return ""
 }
 
 export function sortInactiveDays(
@@ -339,7 +347,11 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
           {item.quality && (
             <Badge
               variant="secondary"
-              className="max-w-[72px] truncate px-1 py-0 font-mono text-[10px]"
+              title={item.qualityFull}
+              className={cn(
+                "max-w-[72px] truncate px-1 py-0 font-mono text-[10px]",
+                codecClass(item.qualityFull)
+              )}
             >
               {item.quality}
             </Badge>

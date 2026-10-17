@@ -66,8 +66,8 @@ export class JellyfinClient {
     userId?: string
   ): Promise<JellyfinItem[]> {
     const userParam = userId
-      ? `?userId=${userId}&Fields=UserData,RunTimeTicks`
-      : "?Fields=UserData,RunTimeTicks"
+      ? `?userId=${userId}&Fields=UserData,RunTimeTicks,MediaSources,MediaStreams,Size`
+      : "?Fields=UserData,RunTimeTicks,MediaSources,MediaStreams,Size"
     const res = await this.request<JellyfinItemsResponse>(
       `/Shows/${seriesId}/Episodes${userParam}`
     )

@@ -166,6 +166,9 @@ export interface AuditEpisodeItem {
   progressPercent: number
   status: WatchStatus
   lastPlayedDate?: string
+  sizeBytes?: number
+  quality?: string
+  qualityFull?: string
 }
 
 export interface AuditMediaItem {

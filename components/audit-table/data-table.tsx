@@ -298,6 +298,9 @@ export function DataTable({ initialData }: DataTableProps) {
             conflictReason: `Episode status: ${ep.status}`,
             isWhitelisted: item.isWhitelisted,
             episodes: [ep],
+            sizeBytes: ep.sizeBytes,
+            quality: ep.quality,
+            qualityFull: ep.qualityFull,
           }
         })
 
@@ -334,6 +337,7 @@ export function DataTable({ initialData }: DataTableProps) {
     onExpandedChange: setExpanded,
     onPaginationChange: setPagination,
     getSubRows: (row) => row.subRows,
+    paginateExpandedRows: false,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -684,9 +688,31 @@ export function DataTable({ initialData }: DataTableProps) {
 
         <div className="flex items-center gap-2">
           {table.getFilteredSelectedRowModel().rows.length > 0 && (
-            <Badge variant="secondary" className="font-mono text-xs">
-              {table.getFilteredSelectedRowModel().rows.length} selected
-            </Badge>
+            <>
+              <Badge variant="secondary" className="font-mono text-xs">
+                {table.getFilteredSelectedRowModel().rows.length} selected
+              </Badge>
+              {([true, false] as const).map((want) => (
+                <Button
+                  key={String(want)}
+                  variant="outline"
+                  size="xs"
+                  className="h-8 text-xs"
+                  disabled={isPending}
+                  onClick={() => {
+                    table
+                      .getFilteredSelectedRowModel()
+                      .rows.filter(
+                        (r) => r.depth === 0 && !!r.original.isWhitelisted !== want
+                      )
+                      .forEach((r) => handleToggleWhitelist(r.original))
+                    table.resetRowSelection()
+                  }}
+                >
+                  {want ? "Whitelist" : "Unwhitelist"}
+                </Button>
+              ))}
+            </>
           )}
           <Tooltip>
             <TooltipTrigger

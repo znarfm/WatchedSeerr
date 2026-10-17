@@ -9,7 +9,7 @@ import {
 import { RadarrClient } from "@/lib/clients/radarr"
 import { SonarrClient } from "@/lib/clients/sonarr"
 import { JellyfinClient } from "@/lib/clients/jellyfin"
-import { invalidateAuditCache } from "@/lib/audit"
+import { invalidateAuditCache, normalizeVideoQuality } from "@/lib/audit"
 import type { AuditEpisodeItem, WatchStatus } from "@/types"
 
 export async function refreshAuditAction() {
@@ -101,6 +101,12 @@ export async function getSeriesEpisodesAction(
         progressPercent,
         status,
         lastPlayedDate: userData?.LastPlayedDate,
+        sizeBytes: ep.Size ?? ep.MediaSources?.[0]?.Size,
+        ...normalizeVideoQuality(
+          (ep.MediaStreams ?? ep.MediaSources?.[0]?.MediaStreams)?.find(
+            (s) => s.Type === "Video"
+          )
+        ),
       }
     })
 
