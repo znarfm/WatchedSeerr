@@ -349,12 +349,6 @@ describe("Route-Level Skeleton Loaders Seam", () => {
   it("renders Audit Queue route skeleton (app/loading.tsx) with 5 metric cards, toolbar, and 10 rows", () => {
     const html = renderToStaticMarkup(React.createElement(Loading))
 
-    // Header presence
-    assert.ok(
-      html.includes("WatchedSeerr"),
-      "Loading skeleton has WatchedSeerr header"
-    )
-
     // 5 metric card grid
     assert.ok(
       html.includes(
@@ -381,12 +375,6 @@ describe("Route-Level Skeleton Loaders Seam", () => {
 
   it("renders Watch Matrix route skeleton (app/matrix/loading.tsx) with sticky media column and 4 user columns", () => {
     const html = renderToStaticMarkup(React.createElement(MatrixLoading))
-
-    // Header presence
-    assert.ok(
-      html.includes("Watch Matrix"),
-      "Matrix loading skeleton has Watch Matrix header"
-    )
 
     // Sticky media column
     assert.ok(

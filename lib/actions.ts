@@ -103,8 +103,8 @@ export async function getSeriesEpisodesAction(
         lastPlayedDate: status === "unplayed" ? undefined : userData?.LastPlayedDate,
         sizeBytes: ep.Size ?? ep.MediaSources?.[0]?.Size,
         ...normalizeVideoQuality(
-          (ep.MediaStreams ?? ep.MediaSources?.[0]?.MediaStreams)?.find(
-            (s) => s.Type === "Video"
+          ((ep as any).MediaStreams ?? ep.MediaSources?.[0]?.MediaStreams)?.find(
+            (s: any) => s.Type === "Video"
           )
         ),
       }
