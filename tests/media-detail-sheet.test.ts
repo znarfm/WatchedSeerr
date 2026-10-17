@@ -358,7 +358,7 @@ describe("Route-Level Skeleton Loaders Seam", () => {
     // 5 metric card grid
     assert.ok(
       html.includes(
-        "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4"
+        "grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5"
       ),
       "Contains 5-card responsive metric grid"
     )
