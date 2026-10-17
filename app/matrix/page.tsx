@@ -1,4 +1,12 @@
 import { auditMedia } from "@/lib/audit"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import Link from "next/link"
 import { IconLayoutGrid, IconArrowLeft } from "@tabler/icons-react"
 
@@ -72,33 +80,33 @@ export default async function MatrixPage() {
           </div>
         ) : report && (
           <div className="border border-border overflow-x-auto">
-            <table className="w-full text-xs text-left border-collapse">
-              <thead>
-                <tr className="border-b border-border bg-muted/40">
-                  <th className="p-3 font-semibold uppercase text-muted-foreground min-w-[200px]">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/40 hover:bg-muted/40">
+                  <TableHead className="p-3 uppercase text-muted-foreground min-w-[200px]">
                     Requested Media
-                  </th>
+                  </TableHead>
                   {allUsernames.map((user) => (
-                    <th
+                    <TableHead
                       key={user}
-                      className="p-3 font-semibold uppercase text-muted-foreground text-center min-w-[100px] border-l border-border/50"
+                      className="p-3 uppercase text-muted-foreground text-center min-w-[100px] border-l border-border/50"
                     >
                       {user}
-                    </th>
+                    </TableHead>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {report.items.map((item) => (
-                  <tr key={item.id} className="border-b border-border/50 hover:bg-muted/30">
-                    <td className="p-3 font-medium">
+                  <TableRow key={item.id} className="hover:bg-muted/30">
+                    <TableCell className="p-3 font-medium">
                       <div className="truncate max-w-[220px]" title={item.title}>
                         {item.title}
                       </div>
                       <div className="text-[10px] text-muted-foreground uppercase">
                         {item.mediaType} • Req: {item.requester.username}
                       </div>
-                    </td>
+                    </TableCell>
 
                     {allUsernames.map((username) => {
                       const isRequester =
@@ -113,7 +121,7 @@ export default async function MatrixPage() {
                       const status = state?.status ?? "unplayed"
 
                       return (
-                        <td
+                        <TableCell
                           key={username}
                           className={`p-2.5 text-center border-l border-border/50 ${
                             isRequester ? "bg-primary/5" : ""
@@ -134,13 +142,13 @@ export default async function MatrixPage() {
                               {status === "in_progress" ? "in-prog" : status}
                             </span>
                           </div>
-                        </td>
+                        </TableCell>
                       )
                     })}
-                  </tr>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </main>

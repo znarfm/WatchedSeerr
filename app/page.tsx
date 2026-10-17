@@ -1,5 +1,7 @@
 import { auditMedia } from "@/lib/audit"
 import { DataTable } from "@/components/audit-table/data-table"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
 import Link from "next/link"
 import { IconDeviceTv, IconLayoutGrid, IconRefresh } from "@tabler/icons-react"
 
@@ -54,39 +56,58 @@ export default async function Page() {
 
       {/* Main Content Area */}
       <main className="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
-        {/* Metric Badges */}
+        {/* Metric Cards */}
         {report && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="border border-border p-3 bg-muted/10">
-              <span className="text-[11px] uppercase tracking-wider text-muted-foreground block">
-                Total Audited
-              </span>
-              <span className="text-2xl font-bold font-mono">{report.totalItems}</span>
-            </div>
-            <div className="border border-emerald-500/20 bg-emerald-500/5 p-3">
-              <span className="text-[11px] uppercase tracking-wider text-emerald-400 block">
-                Safe to Purge
-              </span>
-              <span className="text-2xl font-bold font-mono text-emerald-400">
-                {report.safeCount}
-              </span>
-            </div>
-            <div className="border border-amber-500/20 bg-amber-500/5 p-3">
-              <span className="text-[11px] uppercase tracking-wider text-amber-400 block">
-                Active Conflicts
-              </span>
-              <span className="text-2xl font-bold font-mono text-amber-400">
-                {report.conflictCount}
-              </span>
-            </div>
-            <div className="border border-rose-500/20 bg-rose-500/5 p-3">
-              <span className="text-[11px] uppercase tracking-wider text-rose-400 block">
-                Ghost Requests
-              </span>
-              <span className="text-2xl font-bold font-mono text-rose-400">
-                {report.ghostCount}
-              </span>
-            </div>
+            <Card className="bg-muted/10">
+              <CardHeader className="pb-1 pt-3 px-3">
+                <CardTitle className="text-[11px] uppercase tracking-wider text-muted-foreground font-normal">
+                  Total Audited
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-3 pb-3">
+                <span className="text-2xl font-bold font-mono">{report.totalItems}</span>
+              </CardContent>
+            </Card>
+
+            <Card className="border-emerald-500/20 bg-emerald-500/5">
+              <CardHeader className="pb-1 pt-3 px-3">
+                <CardTitle className="text-[11px] uppercase tracking-wider text-emerald-400 font-normal">
+                  Safe to Purge
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-3 pb-3">
+                <span className="text-2xl font-bold font-mono text-emerald-400">
+                  {report.safeCount}
+                </span>
+              </CardContent>
+            </Card>
+
+            <Card className="border-amber-500/20 bg-amber-500/5">
+              <CardHeader className="pb-1 pt-3 px-3">
+                <CardTitle className="text-[11px] uppercase tracking-wider text-amber-400 font-normal">
+                  Active Conflicts
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-3 pb-3">
+                <span className="text-2xl font-bold font-mono text-amber-400">
+                  {report.conflictCount}
+                </span>
+              </CardContent>
+            </Card>
+
+            <Card className="border-rose-500/20 bg-rose-500/5">
+              <CardHeader className="pb-1 pt-3 px-3">
+                <CardTitle className="text-[11px] uppercase tracking-wider text-rose-400 font-normal">
+                  Ghost Requests
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-3 pb-3">
+                <span className="text-2xl font-bold font-mono text-rose-400">
+                  {report.ghostCount}
+                </span>
+              </CardContent>
+            </Card>
           </div>
         )}
 
@@ -99,7 +120,10 @@ export default async function Page() {
             </p>
           </div>
         ) : report ? (
-          <DataTable initialData={report.items} />
+          <div className="space-y-4">
+            <Separator />
+            <DataTable initialData={report.items} />
+          </div>
         ) : null}
       </main>
     </div>

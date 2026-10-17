@@ -1,9 +1,9 @@
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 export default function RootLayout({
-
   children,
 }: Readonly<{
   children: React.ReactNode
@@ -15,7 +15,9 @@ export default function RootLayout({
       className="antialiased font-sans"
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <TooltipProvider>{children}</TooltipProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

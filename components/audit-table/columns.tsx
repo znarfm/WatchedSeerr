@@ -2,7 +2,13 @@ import type { ColumnDef } from "@tanstack/react-table"
 import type { AuditMediaItem } from "@/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Progress } from "@/components/ui/progress"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import {
   IconBookmark,
   IconBookmarkFilled,
@@ -28,24 +34,22 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
   {
     id: "select",
     header: ({ table }) => (
-      <input
-        type="checkbox"
-        checked={table.getIsAllPageRowsSelected()}
-        onChange={(e) => table.toggleAllPageRowsSelected(!!e.target.checked)}
-        aria-label="Select all"
-        className="cursor-pointer"
-        onClick={(e) => e.stopPropagation()}
-      />
+      <div onClick={(e) => e.stopPropagation()} className="flex items-center">
+        <Checkbox
+          checked={table.getIsAllPageRowsSelected()}
+          onCheckedChange={(checked) => table.toggleAllPageRowsSelected(!!checked)}
+          aria-label="Select all"
+        />
+      </div>
     ),
     cell: ({ row }) => (
-      <input
-        type="checkbox"
-        checked={row.getIsSelected()}
-        onChange={(e) => row.toggleSelected(!!e.target.checked)}
-        aria-label="Select row"
-        className="cursor-pointer"
-        onClick={(e) => e.stopPropagation()}
-      />
+      <div onClick={(e) => e.stopPropagation()} className="flex items-center">
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(checked) => row.toggleSelected(!!checked)}
+          aria-label="Select row"
+        />
+      </div>
     ),
     enableSorting: false,
     enableHiding: false,
@@ -195,30 +199,45 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
           className="flex items-center justify-end gap-1"
           onClick={(e) => e.stopPropagation()}
         >
-          <Button
-            size="icon"
-            variant="ghost"
-            className="size-7"
-            disabled={meta?.isPending}
-            onClick={() => meta?.onToggleWhitelist(item)}
-            title={item.isWhitelisted ? "Remove whitelist" : "Add to whitelist"}
-          >
-            {item.isWhitelisted ? (
-              <IconBookmarkFilled className="size-4 text-amber-500" />
-            ) : (
-              <IconBookmark className="size-4" />
-            )}
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="size-7 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
-            disabled={meta?.isPending}
-            onClick={() => meta?.onDelete(item)}
-            title="Delete media"
-          >
-            <IconTrash className="size-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="size-7"
+                  disabled={meta?.isPending}
+                  onClick={() => meta?.onToggleWhitelist(item)}
+                />
+              }
+            >
+              {item.isWhitelisted ? (
+                <IconBookmarkFilled className="size-4 text-amber-500" />
+              ) : (
+                <IconBookmark className="size-4" />
+              )}
+            </TooltipTrigger>
+            <TooltipContent>
+              {item.isWhitelisted ? "Remove whitelist" : "Add to whitelist"}
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="size-7 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
+                  disabled={meta?.isPending}
+                  onClick={() => meta?.onDelete(item)}
+                />
+              }
+            >
+              <IconTrash className="size-4" />
+            </TooltipTrigger>
+            <TooltipContent>Delete media</TooltipContent>
+          </Tooltip>
         </div>
       )
     },

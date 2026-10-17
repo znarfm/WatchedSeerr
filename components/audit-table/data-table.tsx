@@ -20,6 +20,19 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Sheet,
   SheetContent,
@@ -35,6 +48,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconUser,
+  IconSearch,
 } from "@tabler/icons-react"
 
 interface DataTableProps {
@@ -48,6 +62,7 @@ export function DataTable({ initialData }: DataTableProps) {
   const [globalFilter, setGlobalFilter] = React.useState("")
   const [rowSelection, setRowSelection] = React.useState({})
   const [selectedItem, setSelectedItem] = React.useState<AuditMediaItem | null>(null)
+  const [deleteCandidate, setDeleteCandidate] = React.useState<AuditMediaItem | null>(null)
   const [isPending, startTransition] = React.useTransition()
 
   const handleToggleWhitelist = (item: AuditMediaItem) => {
@@ -67,7 +82,12 @@ export function DataTable({ initialData }: DataTableProps) {
   }
 
   const handleDelete = (item: AuditMediaItem) => {
-    if (!confirm(`Are you sure you want to delete ${item.title}?`)) return
+    setDeleteCandidate(item)
+  }
+
+  const confirmDelete = () => {
+    if (!deleteCandidate) return
+    const item = deleteCandidate
     startTransition(async () => {
       const res = await deleteMediaAction({
         id: item.id,
@@ -78,6 +98,7 @@ export function DataTable({ initialData }: DataTableProps) {
         setData((prev) => prev.filter((i) => i.id !== item.id))
         if (selectedItem?.id === item.id) setSelectedItem(null)
       }
+      setDeleteCandidate(null)
     })
   }
 
@@ -106,71 +127,69 @@ export function DataTable({ initialData }: DataTableProps) {
     } satisfies TableMeta,
   })
 
-  const currentTypeFilter = (table.getColumn("title")?.getFilterValue() as string) || "all"
-  const currentStatusFilter = (table.getColumn("status")?.getFilterValue() as string) || "all"
+  const currentTypeFilter =
+    (table.getColumn("mediaType")?.getFilterValue() as string) || "all"
+  const currentStatusFilter =
+    (table.getColumn("status")?.getFilterValue() as string) || "all"
 
   return (
     <div className="space-y-4">
       {/* Search & Faceted Filter Controls */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/20 p-3 border border-border">
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="text"
-            placeholder="Search by title..."
-            value={globalFilter ?? ""}
-            onChange={(e) => setGlobalFilter(e.target.value)}
-            className="h-8 w-52 bg-background border border-border px-2 text-xs focus:outline-none focus:border-ring"
-          />
-
-          <div className="flex items-center border border-border bg-background">
-            {(["all", "movie", "tv"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => {
-                  // Filter by mediaType
-                  const col = table.getColumn("mediaType")
-                  if (t === "all") {
-                    table.setColumnFilters((prev) => prev.filter((f) => f.id !== "mediaType"))
-                  } else {
-                    table.setColumnFilters((prev) => [
-                      ...prev.filter((f) => f.id !== "mediaType"),
-                      { id: "mediaType", value: t },
-                    ])
-                  }
-                }}
-                className="px-2.5 py-1 text-xs uppercase text-muted-foreground hover:text-foreground"
-              >
-                {t}
-              </button>
-            ))}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-56">
+            <Input
+              type="text"
+              placeholder="Search by title..."
+              value={globalFilter ?? ""}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              className="h-8 pl-8 text-xs bg-background"
+            />
+            <IconSearch className="pointer-events-none absolute left-2.5 top-2 size-4 text-muted-foreground" />
           </div>
 
-          <div className="flex items-center border border-border bg-background">
-            {(["all", "safe", "conflict", "ghost"] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => {
-                  const col = table.getColumn("status")
-                  col?.setFilterValue(s === "all" ? undefined : s)
-                }}
-                className={`px-2 py-1 text-xs uppercase ${
-                  (table.getColumn("status")?.getFilterValue() || "all") === s
-                    ? "bg-primary text-primary-foreground font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
+          <Tabs
+            value={currentTypeFilter}
+            onValueChange={(val) => {
+              if (val === "all") {
+                table.setColumnFilters((prev) => prev.filter((f) => f.id !== "mediaType"))
+              } else {
+                table.setColumnFilters((prev) => [
+                  ...prev.filter((f) => f.id !== "mediaType"),
+                  { id: "mediaType", value: val },
+                ])
+              }
+            }}
+          >
+            <TabsList>
+              <TabsTrigger value="all" className="uppercase text-[11px]">All</TabsTrigger>
+              <TabsTrigger value="movie" className="uppercase text-[11px]">Movie</TabsTrigger>
+              <TabsTrigger value="tv" className="uppercase text-[11px]">TV</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <Tabs
+            value={currentStatusFilter}
+            onValueChange={(val) => {
+              const col = table.getColumn("status")
+              col?.setFilterValue(val === "all" ? undefined : val)
+            }}
+          >
+            <TabsList>
+              <TabsTrigger value="all" className="uppercase text-[11px]">All</TabsTrigger>
+              <TabsTrigger value="safe" className="uppercase text-[11px]">Safe</TabsTrigger>
+              <TabsTrigger value="conflict" className="uppercase text-[11px]">Conflict</TabsTrigger>
+              <TabsTrigger value="ghost" className="uppercase text-[11px]">Ghost</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Selected rows batch count */}
         {table.getFilteredSelectedRowModel().rows.length > 0 && (
           <div className="flex items-center gap-2 text-xs">
-            <span className="text-muted-foreground font-mono">
+            <Badge variant="secondary" className="font-mono">
               {table.getFilteredSelectedRowModel().rows.length} selected
-            </span>
+            </Badge>
           </div>
         )}
       </div>
@@ -276,7 +295,7 @@ export function DataTable({ initialData }: DataTableProps) {
                   Household Playback Breakdown
                 </h4>
                 <div className="space-y-3">
-                  <div className="p-2.5 bg-muted/40 border border-primary/40 space-y-1.5">
+                  <Card className="p-3 bg-muted/40 border border-primary/40 space-y-2">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium flex items-center gap-1.5">
                         <IconUser className="size-3.5 text-primary" />
@@ -299,12 +318,12 @@ export function DataTable({ initialData }: DataTableProps) {
                           : "Never"}
                       </span>
                     </div>
-                  </div>
+                  </Card>
 
                   {selectedItem.householdStates.map((user) => (
-                    <div
+                    <Card
                       key={user.userId}
-                      className="p-2.5 bg-muted/20 border border-border space-y-1.5"
+                      className="p-3 bg-muted/20 border border-border space-y-2"
                     >
                       <div className="flex items-center justify-between text-xs">
                         <span className="font-medium flex items-center gap-1.5">
@@ -323,7 +342,7 @@ export function DataTable({ initialData }: DataTableProps) {
                             : "Never"}
                         </span>
                       </div>
-                    </div>
+                    </Card>
                   ))}
                 </div>
               </div>
@@ -348,6 +367,42 @@ export function DataTable({ initialData }: DataTableProps) {
           </SheetContent>
         )}
       </Sheet>
+
+      {/* Confirmation Dialog for Purge */}
+      <Dialog
+        open={!!deleteCandidate}
+        onOpenChange={(open) => !open && setDeleteCandidate(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Media Purge</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete{" "}
+              <span className="font-semibold text-foreground">
+                {deleteCandidate?.title}
+              </span>
+              ? This triggers immediate deletion in Radarr/Sonarr and purges local files.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDeleteCandidate(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={isPending}
+              onClick={confirmDelete}
+            >
+              Confirm Purge
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
