@@ -574,11 +574,7 @@ export function DataTable({ initialData }: DataTableProps) {
 
           <div className="grid w-full grid-cols-2 items-center gap-2 sm:flex sm:w-auto sm:flex-wrap">
             <Select
-              value={
-                currentRequesterFilter === "all"
-                  ? undefined
-                  : currentRequesterFilter
-              }
+              value={currentRequesterFilter}
               onValueChange={(val) => {
                 table
                   .getColumn("requester")
@@ -589,7 +585,9 @@ export function DataTable({ initialData }: DataTableProps) {
                 size="sm"
                 className="h-8 min-w-36 bg-background text-xs"
               >
-                <SelectValue placeholder="All Requesters" />
+                <SelectValue placeholder="All Requesters">
+                  {(val) => (!val || val === "all" ? "All Requesters" : val)}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Requesters</SelectItem>
@@ -602,11 +600,7 @@ export function DataTable({ initialData }: DataTableProps) {
             </Select>
 
             <Select
-              value={
-                currentWatchStateFilter === "all"
-                  ? undefined
-                  : currentWatchStateFilter
-              }
+              value={currentWatchStateFilter}
               onValueChange={(val) => {
                 table
                   .getColumn("progress")
@@ -638,11 +632,7 @@ export function DataTable({ initialData }: DataTableProps) {
             </Select>
 
             <Select
-              value={
-                currentWhitelistFilter === "all"
-                  ? undefined
-                  : currentWhitelistFilter
-              }
+              value={currentWhitelistFilter}
               onValueChange={(val) => {
                 table
                   .getColumn("whitelisted")
