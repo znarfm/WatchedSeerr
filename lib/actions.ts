@@ -72,7 +72,7 @@ export async function getSeriesEpisodesAction(
 
       let status: WatchStatus = "unplayed"
       let progressPercent = 0
-      if (userData?.Played || (userData?.PlayCount || 0) > 0) {
+      if (userData?.Played) {
         status = "completed"
         progressPercent = 100
       } else if (userData?.PlaybackPositionTicks && ep.RunTimeTicks) {
@@ -100,7 +100,7 @@ export async function getSeriesEpisodesAction(
         name: ep.Name,
         progressPercent,
         status,
-        lastPlayedDate: userData?.LastPlayedDate,
+        lastPlayedDate: status === "unplayed" ? undefined : userData?.LastPlayedDate,
         sizeBytes: ep.Size ?? ep.MediaSources?.[0]?.Size,
         ...normalizeVideoQuality(
           (ep.MediaStreams ?? ep.MediaSources?.[0]?.MediaStreams)?.find(

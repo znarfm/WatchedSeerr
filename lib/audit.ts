@@ -173,7 +173,7 @@ function mapUserWatchStatus(
   if (episodes && episodes.length > 0) {
     const totalEpisodes = episodes.length
     const watchedEpisodes = episodes.filter(
-      (ep) => ep.UserData?.Played || (ep.UserData?.PlayCount || 0) > 0
+      (ep) => ep.UserData?.Played
     ).length
     const progressPercent = Math.round((watchedEpisodes / totalEpisodes) * 100)
 
@@ -223,10 +223,6 @@ function mapUserWatchStatus(
       status: pct > 90 ? "completed" : "in_progress",
       progressPercent: pct,
     }
-  }
-
-  if ((userData.PlayCount || 0) > 0) {
-    return { status: "completed", progressPercent: 100 }
   }
 
   return { status: "unplayed", progressPercent: 0 }
@@ -512,12 +508,19 @@ export async function auditMedia(
       for (const jUser of jellyfinUsers) {
         const isRequester = matchedJellyfinUser?.Id === jUser.Id
         const userItems = userItemsMap.get(jUser.Id)
-        const userItem = userItems?.get(jellyfinItem.Id) || jellyfinItem
+        const rawUserItem = userItems?.get(jellyfinItem.Id)
+        const userItem = rawUserItem
+          ? {
+              ...rawUserItem,
+              RunTimeTicks: rawUserItem.RunTimeTicks ?? jellyfinItem.RunTimeTicks,
+            }
+          : jellyfinItem
 
         const { status, progressPercent, episodesWatched, totalEpisodes } =
           mapUserWatchStatus(userItem)
 
-        const lastPlayed = userItem.UserData?.LastPlayedDate
+        const rawLastPlayed = userItem.UserData?.LastPlayedDate
+        const lastPlayed = status === "unplayed" ? undefined : rawLastPlayed
         if (lastPlayed) {
           if (
             !mostRecentPlayedDate ||
@@ -535,7 +538,7 @@ export async function auditMedia(
           status,
           progressPercent,
           lastPlayedDate: lastPlayed,
-          playCount: userItem.UserData?.PlayCount || 0,
+          playCount: status === "unplayed" ? 0 : userItem.UserData?.PlayCount || 0,
           episodesWatched,
           totalEpisodes,
         }

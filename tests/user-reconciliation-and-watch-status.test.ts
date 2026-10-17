@@ -194,7 +194,7 @@ describe("User Reconciliation and Watch Status Seam", () => {
     )
   })
 
-  it("marks movie with PlayCount > 0 and Played: false as completed (100%) and safe", async () => {
+  it("marks movie with PlayCount > 0 and Played: false as unplayed (0%)", async () => {
     const mockRequests: SeerrRequest[] = [
       {
         id: 10,
@@ -236,6 +236,7 @@ describe("User Reconciliation and Watch Status Seam", () => {
           PlayCount: 3,
           IsFavorite: false,
           Played: false,
+          LastPlayedDate: "2026-02-01T00:00:00Z",
         },
       },
     ]
@@ -265,9 +266,10 @@ describe("User Reconciliation and Watch Status Seam", () => {
 
     assert.equal(report.items.length, 1)
     const item = report.items[0]
-    assert.equal(item.requesterState.status, "completed")
-    assert.equal(item.requesterState.progressPercent, 100)
-    assert.equal(item.conflictStatus, "safe")
+    assert.equal(item.requesterState.status, "unplayed")
+    assert.equal(item.requesterState.progressPercent, 0)
+    assert.equal(item.requesterState.lastPlayedDate, undefined)
+    assert.equal(item.requesterState.playCount, 0)
     assert.equal(item.sizeBytes, 4500000000)
   })
 
@@ -523,7 +525,7 @@ describe("User Reconciliation and Watch Status Seam", () => {
     }
   })
 
-  it("getSeriesEpisodesAction forwards userId and marks PlayCount > 0 episodes completed (100%)", async () => {
+  it("getSeriesEpisodesAction forwards userId and respects Played status for episodes", async () => {
     let capturedUrl = ""
     const originalFetch = globalThis.fetch
     globalThis.fetch = (async (url: string | URL | Request) => {
@@ -542,7 +544,20 @@ describe("User Reconciliation and Watch Status Seam", () => {
               UserData: {
                 PlaybackPositionTicks: 0,
                 PlayCount: 2,
+                Played: true,
+              },
+            },
+            {
+              Id: "ep-2",
+              Name: "Episode 2",
+              IndexNumber: 2,
+              ParentIndexNumber: 1,
+              RunTimeTicks: 30000000000,
+              UserData: {
+                PlaybackPositionTicks: 0,
+                PlayCount: 1,
                 Played: false,
+                LastPlayedDate: "2026-02-01T00:00:00Z",
               },
             },
           ],
@@ -561,9 +576,13 @@ describe("User Reconciliation and Watch Status Seam", () => {
           "/Shows/show-123/Episodes?userId=user-456&Fields=UserData,RunTimeTicks"
         )
       )
-      assert.equal(res.episodes.length, 1)
+      assert.equal(res.episodes.length, 2)
       assert.equal(res.episodes[0].status, "completed")
       assert.equal(res.episodes[0].progressPercent, 100)
+
+      assert.equal(res.episodes[1].status, "unplayed")
+      assert.equal(res.episodes[1].progressPercent, 0)
+      assert.equal(res.episodes[1].lastPlayedDate, undefined)
     } finally {
       globalThis.fetch = originalFetch
     }
