@@ -10,6 +10,7 @@ import {
   useReactTable,
   type ColumnFiltersState,
   type SortingState,
+  type VisibilityState,
 } from "@tanstack/react-table"
 import {
   Table,
@@ -61,6 +62,9 @@ export function DataTable({ initialData }: DataTableProps) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [globalFilter, setGlobalFilter] = React.useState("")
   const [rowSelection, setRowSelection] = React.useState({})
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
+    mediaType: false,
+  })
   const [selectedItem, setSelectedItem] = React.useState<AuditMediaItem | null>(null)
   const [deleteCandidate, setDeleteCandidate] = React.useState<AuditMediaItem | null>(null)
   const [isPending, startTransition] = React.useTransition()
@@ -110,11 +114,13 @@ export function DataTable({ initialData }: DataTableProps) {
       columnFilters,
       globalFilter,
       rowSelection,
+      columnVisibility,
     },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
     onRowSelectionChange: setRowSelection,
+    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),

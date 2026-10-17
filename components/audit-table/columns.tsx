@@ -94,6 +94,13 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
     },
   },
   {
+    accessorKey: "mediaType",
+    id: "mediaType",
+    header: () => null,
+    cell: () => null,
+    enableHiding: true,
+  },
+  {
     accessorKey: "requester.username",
     id: "requester",
     header: "Requester",
