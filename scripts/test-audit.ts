@@ -5,7 +5,6 @@ import type { JellyfinClient } from "../lib/clients/jellyfin"
 async function runTestAudit() {
   console.log("=== WatchedSeerr CLI Audit Test ===")
 
-  // Mock clients for testing without live external servers
   const mockSeerr: Partial<SeerrClient> = {
     getRequests: async () => [
       {
@@ -66,6 +65,17 @@ async function runTestAudit() {
         is4k: false,
       },
     ],
+    getMediaDetails: async (mediaType: "movie" | "tv", tmdbId: number) => {
+      const titles: Record<number, string> = {
+        157336: "Interstellar",
+        94605: "Arcane",
+        603: "The Matrix",
+      }
+      return {
+        id: tmdbId,
+        title: titles[tmdbId] || `TMDB ${tmdbId}`,
+      }
+    },
   }
 
   const mockJellyfin: Partial<JellyfinClient> = {
@@ -74,15 +84,38 @@ async function runTestAudit() {
       { Id: "u-2", Name: "bob" },
       { Id: "u-3", Name: "charlie" },
     ],
-    findItemsByTmdbId: async (tmdbId) => {
-      if (tmdbId === 157336) {
+    getAllLibraryItems: async () => [
+      {
+        Id: "jf-item-1",
+        Name: "Interstellar",
+        ProductionYear: 2014,
+        Type: "Movie",
+        RunTimeTicks: 10000000,
+        ProviderIds: { Tmdb: "157336" },
+      },
+      {
+        Id: "jf-item-2",
+        Name: "Arcane",
+        ProductionYear: 2021,
+        Type: "Series",
+        ProviderIds: { Tmdb: "94605" },
+      },
+      {
+        Id: "jf-item-3",
+        Name: "The Matrix",
+        ProductionYear: 1999,
+        Type: "Movie",
+        RunTimeTicks: 10000000,
+        ProviderIds: { Tmdb: "603" },
+      },
+    ],
+    getAllUserItems: async (userId: string) => {
+      if (userId === "u-1") {
         return [
           {
             Id: "jf-item-1",
             Name: "Interstellar",
-            ProductionYear: 2014,
             Type: "Movie",
-            RunTimeTicks: 10000000,
             UserData: {
               PlaybackPositionTicks: 10000000,
               PlayCount: 1,
@@ -91,116 +124,32 @@ async function runTestAudit() {
               LastPlayedDate: new Date(Date.now() - 35 * 86400000).toISOString(),
             },
           },
+          {
+            Id: "jf-item-2",
+            Name: "Arcane",
+            Type: "Series",
+            UserData: {
+              PlaybackPositionTicks: 5000000,
+              PlayCount: 0,
+              IsFavorite: false,
+              Played: false,
+              LastPlayedDate: new Date(Date.now() - 2 * 86400000).toISOString(),
+            },
+          },
         ]
       }
-      if (tmdbId === 94605) {
+      if (userId === "u-2") {
         return [
           {
             Id: "jf-item-2",
             Name: "Arcane",
-            ProductionYear: 2021,
             Type: "Series",
-          },
-        ]
-      }
-      if (tmdbId === 603) {
-        return [
-          {
-            Id: "jf-item-3",
-            Name: "The Matrix",
-            ProductionYear: 1999,
-            Type: "Movie",
-            RunTimeTicks: 10000000,
             UserData: {
-              PlaybackPositionTicks: 0,
+              PlaybackPositionTicks: 3000000,
               PlayCount: 0,
               IsFavorite: false,
               Played: false,
-            },
-          },
-        ]
-      }
-      return []
-    },
-    getUserItemData: async (userId, itemId) => {
-      // Bob requested Arcane and watched 2 episodes. But Alice is watching Arcane right now!
-      if (itemId === "jf-item-2") {
-        return {
-          Id: itemId,
-          Name: "Arcane",
-          Type: "Series",
-          UserData: {
-            PlaybackPositionTicks: 0,
-            PlayCount: 0,
-            IsFavorite: false,
-            Played: false,
-            LastPlayedDate:
-              userId === "u-1"
-                ? new Date(Date.now() - 2 * 86400000).toISOString()
-                : undefined,
-          },
-        }
-      }
-      if (itemId === "jf-item-1") {
-        return {
-          Id: itemId,
-          Name: "Interstellar",
-          Type: "Movie",
-          UserData: {
-            PlaybackPositionTicks: userId === "u-1" ? 10000000 : 0,
-            PlayCount: userId === "u-1" ? 1 : 0,
-            IsFavorite: false,
-            Played: userId === "u-1",
-            LastPlayedDate:
-              userId === "u-1"
-                ? new Date(Date.now() - 35 * 86400000).toISOString()
-                : undefined,
-          },
-        }
-      }
-      return {
-        Id: itemId,
-        Name: "The Matrix",
-        Type: "Movie",
-        UserData: {
-          PlaybackPositionTicks: 0,
-          PlayCount: 0,
-          IsFavorite: false,
-          Played: false,
-        },
-      }
-    },
-    getEpisodes: async (seriesId, userId) => {
-      if (seriesId === "jf-item-2") {
-        return [
-          {
-            Id: "ep-1",
-            Name: "Episode 1",
-            Type: "Episode",
-            UserData: {
-              PlaybackPositionTicks: 1000,
-              PlayCount: 1,
-              IsFavorite: false,
-              Played: true,
-              LastPlayedDate:
-                userId === "u-1"
-                  ? new Date(Date.now() - 2 * 86400000).toISOString()
-                  : undefined,
-            },
-          },
-          {
-            Id: "ep-2",
-            Name: "Episode 2",
-            Type: "Episode",
-            UserData: {
-              PlaybackPositionTicks: 500,
-              PlayCount: 0,
-              IsFavorite: false,
-              Played: false,
-              LastPlayedDate:
-                userId === "u-1"
-                  ? new Date(Date.now() - 1 * 86400000).toISOString()
-                  : undefined,
+              LastPlayedDate: new Date(Date.now() - 10 * 86400000).toISOString(),
             },
           },
         ]

@@ -42,15 +42,24 @@ export class JellyfinClient {
     return this.request<JellyfinUser[]>("/Users")
   }
 
-  async findItemsByTmdbId(tmdbId: number, mediaType?: "movie" | "tv"): Promise<JellyfinItem[]> {
-    const typeFilter = mediaType === "tv" ? "&IncludeItemTypes=Series" : mediaType === "movie" ? "&IncludeItemTypes=Movie" : ""
-    const query = `/Items?HasTmdbId=true&AnyProviderIdEquals=Tmdb.${tmdbId}&Recursive=true&Fields=ProviderIds,ProductionYear,RunTimeTicks,Path,Overview${typeFilter}`
-    const res = await this.request<JellyfinItemsResponse>(query)
+  /**
+   * Fetches the entire library in one single call (Movie & Series) with ProviderIds.
+   */
+  async getAllLibraryItems(): Promise<JellyfinItem[]> {
+    const res = await this.request<JellyfinItemsResponse>(
+      "/Items?Recursive=true&IncludeItemTypes=Movie,Series&Fields=ProviderIds,ProductionYear,RunTimeTicks,Path,Overview&Limit=5000"
+    )
     return res.Items || []
   }
 
-  async getUserItemData(userId: string, itemId: string): Promise<JellyfinItem> {
-    return this.request<JellyfinItem>(`/Users/${userId}/Items/${itemId}`)
+  /**
+   * Fetches all user items with watch progress for a user in one single call.
+   */
+  async getAllUserItems(userId: string): Promise<JellyfinItem[]> {
+    const res = await this.request<JellyfinItemsResponse>(
+      `/Users/${userId}/Items?Recursive=true&IncludeItemTypes=Movie,Series&Fields=UserData&Limit=5000`
+    )
+    return res.Items || []
   }
 
   async getEpisodes(seriesId: string, userId?: string): Promise<JellyfinItem[]> {
