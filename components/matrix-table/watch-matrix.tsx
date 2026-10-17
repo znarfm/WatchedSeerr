@@ -510,10 +510,11 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
               {/* Sticky Left Requested Media Column */}
               <TableHead
                 onClick={handleTitleHeaderClick}
-                className="sticky left-0 z-10 min-w-[260px] cursor-pointer border-r border-border bg-background p-3 text-muted-foreground uppercase select-none hover:bg-muted/60"
+                className="sticky left-0 z-10 w-32 min-w-32 max-w-32 cursor-pointer border-r border-border bg-background p-2 text-muted-foreground uppercase select-none hover:bg-muted/60 sm:w-auto sm:min-w-[260px] sm:max-w-none sm:p-3"
               >
                 <div className="flex items-center justify-between gap-1.5">
-                  <span>Requested Media</span>
+                  <span className="hidden sm:inline">Requested Media</span>
+                  <span className="sm:hidden">Media</span>
                   {sortField === "title" ? (
                     sortDir === "asc" ? (
                       <IconArrowUp className="size-3.5 shrink-0 text-primary" />
@@ -569,12 +570,12 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
             {isRefreshing ? (
               Array.from({ length: 8 }).map((_, idx) => (
                 <TableRow key={`refresh-skeleton-${idx}`}>
-                  <TableCell className="sticky left-0 z-10 border-r border-border bg-background p-3">
-                    <div className="flex items-center gap-2.5">
-                      <Skeleton className="size-9 shrink-0 rounded" />
+                  <TableCell className="sticky left-0 z-10 w-32 min-w-32 max-w-32 border-r border-border bg-background p-2 sm:w-auto sm:min-w-[260px] sm:max-w-none sm:p-3">
+                    <div className="flex items-center gap-1.5 sm:gap-2.5">
+                      <Skeleton className="size-7 shrink-0 rounded sm:size-9" />
                       <div className="min-w-0 flex-1 space-y-1.5">
-                        <Skeleton className="h-3.5 w-3/4" />
-                        <Skeleton className="h-2.5 w-1/2" />
+                        <Skeleton className="h-3.5 w-full sm:w-3/4" />
+                        <Skeleton className="hidden h-2.5 w-1/2 sm:block" />
                       </div>
                     </div>
                   </TableCell>
@@ -614,42 +615,42 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
                     onClick={() => setSelectedItem(item)}
                   >
                     {/* Sticky Requested Media Cell */}
-                    <TableCell className="sticky left-0 z-10 min-w-[260px] border-r border-border bg-background p-3 font-medium">
-                      <div className="flex items-center gap-2.5">
+                    <TableCell className="sticky left-0 z-10 w-32 min-w-32 max-w-32 border-r border-border bg-background p-2 font-medium sm:w-auto sm:min-w-[260px] sm:max-w-none sm:p-3">
+                      <div className="flex items-center gap-1.5 sm:gap-2.5">
                         {posterSrc ? (
                           <img
                             src={posterSrc}
                             alt={item.title}
                             loading="lazy"
-                            className="size-9 shrink-0 rounded bg-muted object-cover"
+                            className="size-7 shrink-0 rounded bg-muted object-cover sm:size-9"
                           />
                         ) : (
-                          <div className="flex size-9 shrink-0 items-center justify-center rounded border border-border bg-muted/60 text-muted-foreground">
+                          <div className="flex size-7 shrink-0 items-center justify-center rounded border border-border bg-muted/60 text-muted-foreground sm:size-9">
                             {item.mediaType === "movie" ? (
-                              <IconMovie className="size-5" />
+                              <IconMovie className="size-4 sm:size-5" />
                             ) : (
-                              <IconDeviceTv className="size-5" />
+                              <IconDeviceTv className="size-4 sm:size-5" />
                             )}
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-1.5">
+                          <div className="flex items-center gap-1">
                             <span
-                              className="max-w-[180px] truncate text-xs font-semibold"
+                              className="truncate text-xs font-semibold"
                               title={item.title}
                             >
                               {item.title}
                             </span>
                             {item.year && (
-                              <span className="text-[11px] text-muted-foreground">
+                              <span className="hidden text-[11px] text-muted-foreground sm:inline">
                                 ({item.year})
                               </span>
                             )}
                           </div>
-                          <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground uppercase">
+                          <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground uppercase">
                             <span>{item.mediaType}</span>
-                            <span>•</span>
-                            <span>Req: {item.requester.username}</span>
+                            <span className="hidden sm:inline">•</span>
+                            <span className="hidden sm:inline">Req: {item.requester.username}</span>
                           </div>
                           <div className="mt-1 flex flex-wrap items-center gap-1">
                             {item.isWhitelisted && (

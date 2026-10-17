@@ -27,7 +27,7 @@ export default function MatrixLoading() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="sticky left-0 z-20 min-w-50 border-r border-border bg-card p-3 sm:min-w-65">
+                <TableHead className="sticky left-0 z-20 w-32 min-w-32 max-w-32 border-r border-border bg-card p-2 sm:w-auto sm:min-w-65 sm:max-w-none sm:p-3">
                   <Skeleton className="h-4 w-20" />
                 </TableHead>
                 {Array.from({ length: 4 }).map((_, i) => (
@@ -47,12 +47,12 @@ export default function MatrixLoading() {
             <TableBody>
               {Array.from({ length: 10 }).map((_, idx) => (
                 <TableRow key={idx}>
-                  <TableCell className="sticky left-0 z-10 border-r border-border bg-card p-2 sm:p-3">
+                  <TableCell className="sticky left-0 z-10 w-32 min-w-32 max-w-32 border-r border-border bg-card p-2 sm:w-auto sm:min-w-65 sm:max-w-none sm:p-3">
                     <div className="flex items-center gap-2 sm:gap-3">
                       <Skeleton className="h-11 w-8 shrink-0" />
                       <div className="min-w-0 flex-1 space-y-1">
-                        <Skeleton className="h-3.5 w-28 sm:w-36" />
-                        <Skeleton className="h-2.5 w-16" />
+                        <Skeleton className="h-3.5 w-20 sm:w-36" />
+                        <Skeleton className="hidden h-2.5 w-16 sm:block" />
                       </div>
                     </div>
                   </TableCell>

@@ -48,8 +48,10 @@ export default function Loading() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">
-                  <Skeleton className="size-4" />
+                <TableHead className="sticky -left-px z-20 w-10 min-w-10 max-w-10 border-r border-border bg-background p-0 text-center">
+                  <div className="flex size-full items-center justify-center p-2">
+                    <Skeleton className="size-4" />
+                  </div>
                 </TableHead>
                 <TableHead>
                   <Skeleton className="h-3.5 w-24" />
@@ -83,8 +85,10 @@ export default function Loading() {
             <TableBody>
               {Array.from({ length: 10 }).map((_, idx) => (
                 <TableRow key={idx}>
-                  <TableCell className="w-12">
-                    <Skeleton className="size-4" />
+                  <TableCell className="sticky -left-px z-10 w-10 min-w-10 max-w-10 border-r border-border bg-background p-0 text-center">
+                    <div className="flex size-full items-center justify-center p-2">
+                      <Skeleton className="size-4" />
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2.5">

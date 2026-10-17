@@ -766,7 +766,13 @@ export function DataTable({ initialData }: DataTableProps) {
                       key={col.id || colIdx}
                       className={(col.columnDef.meta as any)?.className}
                     >
-                      <Skeleton className="h-4 w-full" />
+                      {col.id === "select" ? (
+                        <div className="flex size-full items-center justify-center p-2">
+                          <Skeleton className="size-4" />
+                        </div>
+                      ) : (
+                        <Skeleton className="h-4 w-full" />
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -785,8 +791,9 @@ export function DataTable({ initialData }: DataTableProps) {
                 <React.Fragment key={row.id}>
                   <TableRow
                     data-state={row.getIsSelected() && "selected"}
+                    data-subrow={row.depth > 0 ? "true" : undefined}
                     className={cn(
-                      "cursor-pointer hover:bg-muted/50",
+                      "group cursor-pointer hover:bg-muted/50",
                       row.depth > 0 && "bg-muted/10 hover:bg-muted/20"
                     )}
                     onClick={() => setSelectedItem(row.original)}

@@ -97,9 +97,15 @@ function SortHeader({
 export const columns: ColumnDef<AuditMediaItem>[] = [
   {
     id: "select",
-    meta: { className: "w-10" },
+    meta: {
+      className:
+        "sticky -left-px z-20 w-10 min-w-10 max-w-10 p-0 text-center border-r border-border bg-background group-hover:bg-muted/50 group-data-[state=selected]:bg-muted group-data-[subrow=true]:bg-muted/10 transition-colors [&:has([role=checkbox])]:p-0 [&:has([role=checkbox])]:pr-0 before:pointer-events-none before:absolute before:inset-y-0 before:-left-4 before:w-4 before:bg-background before:group-hover:bg-muted/50 before:group-data-[state=selected]:bg-muted before:group-data-[subrow=true]:bg-muted/10 before:content-['']",
+    },
     header: ({ table }) => (
-      <div onClick={(e) => e.stopPropagation()} className="flex items-center">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="flex size-full items-center justify-center p-2"
+      >
         <Checkbox
           checked={table.getIsAllPageRowsSelected()}
           onCheckedChange={(checked) =>
@@ -111,9 +117,12 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
     ),
     cell: ({ row }) => {
       // Don't show selection checkbox for sub-rows (episodes)
-      if (row.depth > 0) return null
+      if (row.depth > 0) return <div className="size-full" />
       return (
-        <div onClick={(e) => e.stopPropagation()} className="flex items-center">
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="flex size-full items-center justify-center p-2"
+        >
           <Checkbox
             checked={row.getIsSelected()}
             onCheckedChange={(checked) => row.toggleSelected(!!checked)}

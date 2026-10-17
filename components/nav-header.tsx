@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { IconLayoutGrid } from "@tabler/icons-react"
@@ -11,8 +12,35 @@ export function NavHeader() {
   const isMatrix = pathname === "/matrix"
   const isQueue = pathname === "/"
 
+  const [isVisible, setIsVisible] = React.useState(true)
+  const lastScrollY = React.useRef(0)
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+
+      if (currentScrollY <= 10) {
+        setIsVisible(true)
+      } else if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
+        setIsVisible(false)
+      } else if (currentScrollY < lastScrollY.current) {
+        setIsVisible(true)
+      }
+
+      lastScrollY.current = currentScrollY
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
   return (
-    <header className="border-b border-border bg-muted/20 px-4 py-2.5 sm:px-6 sm:py-3">
+    <header
+      className={cn(
+        "sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur px-4 py-2.5 transition-transform duration-200 ease-in-out sm:px-6 sm:py-3",
+        isVisible ? "translate-y-0" : "-translate-y-full"
+      )}
+    >
       <div className="flex items-center justify-between">
         <Link
           href="/"
