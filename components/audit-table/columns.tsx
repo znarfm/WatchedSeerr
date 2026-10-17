@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Progress } from "@/components/ui/progress"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import {
   Tooltip,
   TooltipContent,
@@ -21,12 +22,17 @@ import {
   IconCheck,
   IconGhost,
   IconArrowsSort,
+  IconChevronDown,
+  IconChevronRight,
+  IconLoader2,
 } from "@tabler/icons-react"
 
 export interface TableMeta {
   onToggleWhitelist: (item: AuditMediaItem) => void
-  onDelete: (item: AuditMediaItem) => void
+  onDelete: (item: AuditMediaItem, target?: "all" | "single_episode", episodeFileId?: number) => void
   onSelectRow: (item: AuditMediaItem) => void
+  onToggleExpand?: (item: AuditMediaItem) => void
+  loadingEpisodes?: Record<string, boolean>
   isPending: boolean
 }
 
@@ -42,15 +48,19 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
         />
       </div>
     ),
-    cell: ({ row }) => (
-      <div onClick={(e) => e.stopPropagation()} className="flex items-center">
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(checked) => row.toggleSelected(!!checked)}
-          aria-label="Select row"
-        />
-      </div>
-    ),
+    cell: ({ row }) => {
+      // Don't show selection checkbox for sub-rows (episodes)
+      if (row.depth > 0) return null
+      return (
+        <div onClick={(e) => e.stopPropagation()} className="flex items-center">
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(checked) => row.toggleSelected(!!checked)}
+            aria-label="Select row"
+          />
+        </div>
+      )
+    },
     enableSorting: false,
     enableHiding: false,
   },
@@ -67,17 +77,79 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
         <IconArrowsSort className="ml-1 size-3" />
       </Button>
     ),
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
       const item = row.original
+      const meta = table.options.meta as TableMeta | undefined
+      const isSubRow = row.depth > 0
+      const isTvSeries = item.mediaType === "tv" && !isSubRow
+      const isLoading = meta?.loadingEpisodes?.[item.id]
+
+      if (isSubRow) {
+        return (
+          <div className="flex items-center gap-2 pl-6">
+            <span className="font-mono text-xs text-muted-foreground">↳</span>
+            <span className="font-medium text-xs text-foreground truncate">{item.title}</span>
+          </div>
+        )
+      }
+
       return (
         <div className="flex items-center gap-2">
-          <div className="flex size-7 shrink-0 items-center justify-center bg-muted text-muted-foreground">
-            {item.mediaType === "tv" ? (
-              <IconDeviceTv className="size-4" />
-            ) : (
-              <IconMovie className="size-4" />
-            )}
-          </div>
+          {isTvSeries ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-5 p-0 shrink-0 text-muted-foreground hover:text-foreground"
+              disabled={isLoading}
+              onClick={(e) => {
+                e.stopPropagation()
+                if (meta?.onToggleExpand) {
+                  meta.onToggleExpand(item)
+                }
+                row.toggleExpanded()
+              }}
+            >
+              {isLoading ? (
+                <IconLoader2 className="size-3.5 animate-spin" />
+              ) : row.getIsExpanded() ? (
+                <IconChevronDown className="size-3.5" />
+              ) : (
+                <IconChevronRight className="size-3.5" />
+              )}
+            </Button>
+          ) : (
+            <div className="size-5 shrink-0" />
+          )}
+
+          {(() => {
+            const posterUrl = item.jellyfinItemId
+              ? `/api/proxy/poster?jellyfinItemId=${item.jellyfinItemId}`
+              : item.posterPath
+              ? `/api/proxy/poster?posterPath=${encodeURIComponent(item.posterPath)}`
+              : item.tmdbId
+              ? `/api/proxy/poster?tmdbId=${item.tmdbId}&mediaType=${item.mediaType}`
+              : null
+
+            return (
+              <div className="relative size-9 shrink-0 overflow-hidden bg-muted border border-border flex items-center justify-center">
+                {posterUrl ? (
+                  <img
+                    src={posterUrl}
+                    alt={item.title}
+                    className="size-full object-cover"
+                    loading="lazy"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = "none"
+                    }}
+                  />
+                ) : item.mediaType === "tv" ? (
+                  <IconDeviceTv className="size-4 text-muted-foreground" />
+                ) : (
+                  <IconMovie className="size-4 text-muted-foreground" />
+                )}
+              </div>
+            )
+          })()}
           <div className="flex flex-col min-w-0">
             <span className="font-medium text-foreground truncate">{item.title}</span>
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
@@ -106,9 +178,22 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
     header: "Requester",
     cell: ({ row }) => {
       const item = row.original
+      const avatarSrc = item.requester.requesterAvatarUrl || (
+        item.requester.matchedJellyfinUserId
+          ? `/api/proxy/avatar?userId=${item.requester.matchedJellyfinUserId}`
+          : item.requester.avatar
+          ? `/api/proxy/avatar?avatar=${encodeURIComponent(item.requester.avatar)}`
+          : undefined
+      )
+
       return (
-        <div className="flex items-center gap-1.5">
-          <IconUser className="size-3.5 text-muted-foreground shrink-0" />
+        <div className="flex items-center gap-2">
+          <Avatar className="size-5 shrink-0">
+            {avatarSrc && <AvatarImage src={avatarSrc} alt={item.requester.username} />}
+            <AvatarFallback className="text-[10px] uppercase font-mono">
+              {item.requester.username.slice(0, 2)}
+            </AvatarFallback>
+          </Avatar>
           <span className="truncate">{item.requester.username}</span>
         </div>
       )
@@ -200,34 +285,38 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
     cell: ({ row, table }) => {
       const item = row.original
       const meta = table.options.meta as TableMeta | undefined
+      const isSubRow = row.depth > 0
+      const sonarrEpisodeFileId = item.episodes?.[0]?.sonarrEpisodeFileId
 
       return (
         <div
           className="flex items-center justify-end gap-1"
           onClick={(e) => e.stopPropagation()}
         >
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="size-7"
-                  disabled={meta?.isPending}
-                  onClick={() => meta?.onToggleWhitelist(item)}
-                />
-              }
-            >
-              {item.isWhitelisted ? (
-                <IconBookmarkFilled className="size-4 text-amber-500" />
-              ) : (
-                <IconBookmark className="size-4" />
-              )}
-            </TooltipTrigger>
-            <TooltipContent>
-              {item.isWhitelisted ? "Remove whitelist" : "Add to whitelist"}
-            </TooltipContent>
-          </Tooltip>
+          {!isSubRow && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-7"
+                    disabled={meta?.isPending}
+                    onClick={() => meta?.onToggleWhitelist(item)}
+                  />
+                }
+              >
+                {item.isWhitelisted ? (
+                  <IconBookmarkFilled className="size-4 text-amber-500" />
+                ) : (
+                  <IconBookmark className="size-4" />
+                )}
+              </TooltipTrigger>
+              <TooltipContent>
+                {item.isWhitelisted ? "Remove whitelist" : "Add to whitelist"}
+              </TooltipContent>
+            </Tooltip>
+          )}
 
           <Tooltip>
             <TooltipTrigger
@@ -237,13 +326,21 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
                   variant="ghost"
                   className="size-7 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
                   disabled={meta?.isPending}
-                  onClick={() => meta?.onDelete(item)}
+                  onClick={() => {
+                    if (isSubRow) {
+                      meta?.onDelete(item, "single_episode", sonarrEpisodeFileId)
+                    } else {
+                      meta?.onDelete(item, "all")
+                    }
+                  }}
                 />
               }
             >
               <IconTrash className="size-4" />
             </TooltipTrigger>
-            <TooltipContent>Delete media</TooltipContent>
+            <TooltipContent>
+              {isSubRow ? "Delete episode file" : "Delete media"}
+            </TooltipContent>
           </Tooltip>
         </div>
       )

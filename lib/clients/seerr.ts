@@ -46,6 +46,8 @@ export class SeerrClient {
       releaseDate?: string
       firstAirDate?: string
       posterPath?: string
+      overview?: string
+      genres?: { id: number; name: string }[]
     }>(`/api/v1/${mediaType}/${tmdbId}`)
   }
 }

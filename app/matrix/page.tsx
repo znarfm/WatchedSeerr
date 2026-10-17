@@ -7,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import Link from "next/link"
 import { IconLayoutGrid, IconArrowLeft } from "@tabler/icons-react"
 
@@ -22,15 +23,34 @@ export default async function MatrixPage() {
     errorMessage = err?.message || "Failed to load audit data"
   }
 
-  // Extract unique users across all items
-  const allUsernames = Array.from(
-    new Set(
-      report?.items.flatMap((item) => [
-        item.requester.username,
-        ...item.householdStates.map((h) => h.username),
-      ]) || []
+  // Extract unique users and their avatars across all items
+  const userMap = new Map<string, { username: string; avatarUrl?: string }>()
+  for (const item of report?.items || []) {
+    const reqAvatar = item.requester.requesterAvatarUrl || (
+      item.requester.matchedJellyfinUserId
+        ? `/api/proxy/avatar?userId=${item.requester.matchedJellyfinUserId}`
+        : item.requester.avatar
+        ? `/api/proxy/avatar?avatar=${encodeURIComponent(item.requester.avatar)}`
+        : undefined
     )
-  ).sort()
+    if (!userMap.has(item.requester.username)) {
+      userMap.set(item.requester.username, {
+        username: item.requester.username,
+        avatarUrl: reqAvatar,
+      })
+    }
+
+    for (const h of item.householdStates) {
+      if (!userMap.has(h.username)) {
+        userMap.set(h.username, {
+          username: h.username,
+          avatarUrl: h.userId ? `/api/proxy/avatar?userId=${h.userId}` : undefined,
+        })
+      }
+    }
+  }
+
+  const allUsernames = Array.from(userMap.keys()).sort()
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -86,14 +106,27 @@ export default async function MatrixPage() {
                   <TableHead className="p-3 uppercase text-muted-foreground min-w-[200px]">
                     Requested Media
                   </TableHead>
-                  {allUsernames.map((user) => (
-                    <TableHead
-                      key={user}
-                      className="p-3 uppercase text-muted-foreground text-center min-w-[100px] border-l border-border/50"
-                    >
-                      {user}
-                    </TableHead>
-                  ))}
+                  {allUsernames.map((username) => {
+                    const u = userMap.get(username)
+                    return (
+                      <TableHead
+                        key={username}
+                        className="p-3 uppercase text-muted-foreground text-center min-w-[110px] border-l border-border/50"
+                      >
+                        <div className="flex flex-col items-center justify-center gap-1.5">
+                          <Avatar className="size-6 shrink-0">
+                            {u?.avatarUrl && (
+                              <AvatarImage src={u.avatarUrl} alt={username} />
+                            )}
+                            <AvatarFallback className="text-[10px] uppercase font-mono">
+                              {username.slice(0, 2)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="truncate max-w-[90px]">{username}</span>
+                        </div>
+                      </TableHead>
+                    )
+                  })}
                 </TableRow>
               </TableHeader>
               <TableBody>

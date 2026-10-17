@@ -19,7 +19,16 @@ interface AuditOptions {
 }
 
 // Persistent process-level cache for TMDB details (survives requests while server runs)
-const titleDetailsCache = new Map<string, { title: string; year?: number; posterPath?: string }>()
+const titleDetailsCache = new Map<
+  string,
+  {
+    title: string
+    year?: number
+    posterPath?: string
+    overview?: string
+    genres?: string[]
+  }
+>()
 
 function calculateDaysAgo(dateStr?: string): number | null {
   if (!dateStr) return null
@@ -110,11 +119,13 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
     })
   )
 
-  // 4. Resolve media titles: check cache, then fetch missing in batches of 25
+  // 4. Resolve media metadata: check cache, then fetch missing in batches of 25 (for items in Jellyfin)
   const missingRequests = requests.filter((r) => {
     if (!r.media?.tmdbId) return false
+    const tmdbIdStr = String(r.media.tmdbId)
+    if (!jfByTmdb.has(tmdbIdStr)) return false
     const key = `${r.media.mediaType || "movie"}-${r.media.tmdbId}`
-    return !titleDetailsCache.has(key) && !jfByTmdb.has(String(r.media.tmdbId))
+    return !titleDetailsCache.has(key)
   })
 
   const CHUNK_SIZE = 25
@@ -130,10 +141,13 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
           const title = details.title || (details as any).name || `TMDB ${tmdbId}`
           const yearStr = details.releaseDate || (details as any).firstAirDate
           const year = yearStr ? new Date(yearStr).getFullYear() : undefined
+          const genres = details.genres?.map((g) => g.name).filter(Boolean)
           titleDetailsCache.set(key, {
             title,
             year: isNaN(year!) ? undefined : year,
             posterPath: details.posterPath,
+            overview: details.overview,
+            genres,
           })
         } catch {
           titleDetailsCache.set(key, { title: `TMDB ${tmdbId}` })
@@ -150,6 +164,7 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
   }
 
   const auditItems: AuditMediaItem[] = []
+  const seenTvTmdbIds = new Set<number>()
 
   for (const req of requests) {
     const media = req.media
@@ -157,25 +172,41 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
 
     const tmdbId = media.tmdbId
     const mediaType = media.mediaType || "movie"
+
+    // Deduplicate TV series requests to a single parent row
+    if (mediaType === "tv") {
+      if (seenTvTmdbIds.has(tmdbId)) continue
+      seenTvTmdbIds.add(tmdbId)
+    }
+
     const requestedAt = req.createdAt
 
     // Find Jellyfin library item matching this TMDB ID
     const jellyfinItem = jfByTmdb.get(String(tmdbId))
 
-    // Resolve title and year
-    let title = jellyfinItem?.Name
-    let year = jellyfinItem?.ProductionYear
-    let posterPath: string | undefined
+    // Skip tracked/unacquired media that does not exist in Jellyfin
+    if (!jellyfinItem) continue
 
-    if (!title) {
-      const cached = titleDetailsCache.get(`${mediaType}-${tmdbId}`)
-      if (cached) {
-        title = cached.title
-        year = cached.year
-        posterPath = cached.posterPath
-      } else {
-        title = `TMDB ${tmdbId}`
-      }
+    // Resolve metadata: title, year, overview, genres, posterPath
+    const cached = titleDetailsCache.get(`${mediaType}-${tmdbId}`)
+    const title = jellyfinItem.Name || cached?.title || `TMDB ${tmdbId}`
+    const year = jellyfinItem.ProductionYear || cached?.year
+    const posterPath = cached?.posterPath
+    const overview = jellyfinItem.Overview || cached?.overview
+    const genres = (jellyfinItem.Genres && jellyfinItem.Genres.length > 0)
+      ? jellyfinItem.Genres
+      : cached?.genres
+    const jellyfinImageTag = jellyfinItem.ImageTags?.Primary
+
+    // Quality determination (e.g. "4K", "1080p", "720p", "Web-DL")
+    let quality: string | undefined
+    const videoStream = jellyfinItem.MediaSources?.[0]?.MediaStreams?.find(
+      (s) => s.Type === "Video"
+    )
+    if (videoStream?.DisplayTitle) {
+      quality = videoStream.DisplayTitle
+    } else if (req.is4k) {
+      quality = "4K"
     }
 
     // Match requester profile
@@ -269,6 +300,12 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
     const itemIdentifier = `req-${req.id}-tmdb-${tmdbId}`
     const whitelisted = isItemWhitelisted(itemIdentifier)
 
+    const requesterAvatarUrl = matchedJellyfinUser?.Id
+      ? `/api/proxy/avatar?userId=${matchedJellyfinUser.Id}`
+      : req.requestedBy?.avatar
+      ? `/api/proxy/avatar?avatar=${encodeURIComponent(req.requestedBy.avatar)}`
+      : undefined
+
     auditItems.push({
       id: itemIdentifier,
       requestId: req.id,
@@ -278,12 +315,17 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
       year,
       mediaType,
       posterPath,
+      overview,
+      genres,
+      quality,
+      jellyfinImageTag,
       sizeBytes: jellyfinItem?.Size,
       requestedAt,
       requester: {
         id: req.requestedBy?.id || 0,
         username: requesterUsername,
         avatar: req.requestedBy?.avatar,
+        requesterAvatarUrl,
         matchedJellyfinUserId: matchedJellyfinUser?.Id,
       },
       requesterState,

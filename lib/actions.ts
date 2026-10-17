@@ -5,6 +5,8 @@ import { toggleWhitelistItem } from "@/lib/whitelist"
 import { toggleWhitelistSchema, deleteActionSchema } from "@/lib/validation/actions"
 import { RadarrClient } from "@/lib/clients/radarr"
 import { SonarrClient } from "@/lib/clients/sonarr"
+import { JellyfinClient } from "@/lib/clients/jellyfin"
+import type { AuditEpisodeItem, WatchStatus } from "@/types"
 
 export async function toggleWhitelistAction(input: unknown) {
   const parsed = toggleWhitelistSchema.safeParse(input)
@@ -13,9 +15,74 @@ export async function toggleWhitelistAction(input: unknown) {
   }
 
   const isWhitelisted = toggleWhitelistItem(parsed.data)
-  revalidatePath("/")
-  revalidatePath("/matrix")
+  try {
+    revalidatePath("/")
+    revalidatePath("/matrix")
+  } catch {
+    // Outside Next.js request context (e.g. tests)
+  }
   return { success: true, isWhitelisted }
+}
+
+export async function getSeriesEpisodesAction(jellyfinItemId: string, seriesTmdbId: number) {
+  try {
+    const jellyfin = new JellyfinClient()
+    const sonarr = new SonarrClient()
+
+    const [jellyfinEpisodes, sonarrSeries] = await Promise.all([
+      jellyfin.getEpisodes(jellyfinItemId),
+      sonarr.isConfigured() ? sonarr.getSeriesByTmdbId(seriesTmdbId) : Promise.resolve(null),
+    ])
+
+    let sonarrFiles: { id: number; seasonNumber: number; relativePath: string }[] = []
+    if (sonarrSeries) {
+      sonarrFiles = await sonarr.getEpisodeFiles(sonarrSeries.id)
+    }
+
+    const episodes: AuditEpisodeItem[] = jellyfinEpisodes.map((ep) => {
+      const seasonNumber = ep.ParentIndexNumber ?? 1
+      const episodeNumber = ep.IndexNumber ?? 0
+      const userData = ep.UserData
+
+      let status: WatchStatus = "unplayed"
+      let progressPercent = 0
+      if (userData?.Played) {
+        status = "completed"
+        progressPercent = 100
+      } else if (userData?.PlaybackPositionTicks && ep.RunTimeTicks) {
+        progressPercent = Math.min(99, Math.round((userData.PlaybackPositionTicks / ep.RunTimeTicks) * 100))
+        status = progressPercent > 90 ? "completed" : "in_progress"
+      }
+
+      // Try matching Sonarr episode file by season & episode pattern in relativePath or seasonNumber
+      const matchedSonarrFile = sonarrFiles.find((f) => {
+        if (f.seasonNumber !== seasonNumber) return false
+        const epPattern = new RegExp(`E0*${episodeNumber}\\b`, "i")
+        return epPattern.test(f.relativePath)
+      })
+
+      return {
+        id: `ep-${ep.Id}`,
+        episodeId: ep.Id,
+        seriesId: jellyfinItemId,
+        sonarrEpisodeFileId: matchedSonarrFile?.id,
+        seasonNumber,
+        episodeNumber,
+        name: ep.Name,
+        progressPercent,
+        status,
+        lastPlayedDate: userData?.LastPlayedDate,
+      }
+    })
+
+    // Sort by Season ASC, Episode ASC
+    episodes.sort((a, b) => a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber)
+
+    return { success: true, episodes }
+  } catch (error) {
+    console.error("[WatchedSeerr] Failed to fetch series episodes:", error)
+    return { success: false, episodes: [] as AuditEpisodeItem[], error: String(error) }
+  }
 }
 
 export async function deleteMediaAction(input: unknown) {
@@ -24,7 +91,7 @@ export async function deleteMediaAction(input: unknown) {
     return { success: false, error: parsed.error.format() }
   }
 
-  const { id, tmdbId, tvdbId, mediaType, target, episodeFileIds } = parsed.data
+  const { id, tmdbId, tvdbId, mediaType, target, episodeFileId, episodeFileIds } = parsed.data
   let details = ""
 
   if (mediaType === "movie") {
@@ -48,7 +115,10 @@ export async function deleteMediaAction(input: unknown) {
         : await sonarr.getSeriesByTmdbId(tmdbId)
 
       if (series) {
-        if (target === "watched_episodes" && episodeFileIds && episodeFileIds.length > 0) {
+        if (target === "single_episode" && episodeFileId) {
+          await sonarr.deleteEpisodeFile(episodeFileId)
+          details = `Deleted episode file ${episodeFileId} from Sonarr series: ${series.title}`
+        } else if (target === "watched_episodes" && episodeFileIds && episodeFileIds.length > 0) {
           await Promise.all(episodeFileIds.map((epId) => sonarr.deleteEpisodeFile(epId)))
           details = `Deleted ${episodeFileIds.length} episodes from Sonarr series: ${series.title}`
         } else {
@@ -64,7 +134,11 @@ export async function deleteMediaAction(input: unknown) {
   }
 
   console.log(`[WatchedSeerr] Purged media: ${id} (${details})`)
-  revalidatePath("/")
-  revalidatePath("/matrix")
+  try {
+    revalidatePath("/")
+    revalidatePath("/matrix")
+  } catch {
+    // Outside Next.js request context (e.g. tests)
+  }
   return { success: true, purgedId: id, details }
 }

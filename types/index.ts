@@ -82,6 +82,19 @@ export interface JellyfinItem {
   SeriesName?: string
   SeasonId?: string
   SeasonName?: string
+  Overview?: string
+  Genres?: string[]
+  ImageTags?: {
+    Primary?: string
+    [key: string]: string | undefined
+  }
+  MediaSources?: {
+    MediaStreams?: {
+      Type?: string
+      DisplayTitle?: string
+      [key: string]: any
+    }[]
+  }[]
   Path?: string
   Size?: number
 }
@@ -119,6 +132,19 @@ export interface EpisodePlaybackState {
   }[]
 }
 
+export interface AuditEpisodeItem {
+  id: string
+  episodeId: string // Jellyfin Episode ID
+  seriesId: string
+  sonarrEpisodeFileId?: number
+  seasonNumber: number
+  episodeNumber: number
+  name: string
+  progressPercent: number
+  status: WatchStatus
+  lastPlayedDate?: string
+}
+
 export interface AuditMediaItem {
   id: string
   requestId: number
@@ -128,12 +154,17 @@ export interface AuditMediaItem {
   year?: number
   mediaType: MediaType
   posterPath?: string
+  overview?: string
+  genres?: string[]
+  quality?: string
+  jellyfinImageTag?: string
   sizeBytes?: number
   requestedAt: string
   requester: {
     id: number
     username: string
     avatar?: string
+    requesterAvatarUrl?: string
     matchedJellyfinUserId?: string
   }
   requesterState: UserPlaybackState
@@ -142,6 +173,8 @@ export interface AuditMediaItem {
   conflictStatus: ConflictStatus
   conflictReason: string
   isWhitelisted: boolean
+  episodes?: AuditEpisodeItem[]
+  subRows?: AuditMediaItem[]
 }
 
 export interface AuditReport {

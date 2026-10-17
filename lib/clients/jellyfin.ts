@@ -47,7 +47,7 @@ export class JellyfinClient {
    */
   async getAllLibraryItems(): Promise<JellyfinItem[]> {
     const res = await this.request<JellyfinItemsResponse>(
-      "/Items?Recursive=true&IncludeItemTypes=Movie,Series&Fields=ProviderIds,ProductionYear,RunTimeTicks,Path,Overview&Limit=5000"
+      "/Items?Recursive=true&IncludeItemTypes=Movie,Series&Fields=ProviderIds,ProductionYear,RunTimeTicks,Path,Overview,Genres,MediaStreams,ImageTags&Limit=5000"
     )
     return res.Items || []
   }

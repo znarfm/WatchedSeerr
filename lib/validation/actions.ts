@@ -13,7 +13,8 @@ export const deleteActionSchema = z.object({
   tmdbId: z.number().int().positive(),
   tvdbId: z.number().int().positive().optional(),
   mediaType: z.enum(["movie", "tv"]).default("movie"),
-  target: z.enum(["all", "watched_episodes"]).default("all"),
+  target: z.enum(["all", "watched_episodes", "single_episode"]).default("all"),
+  episodeFileId: z.number().optional(),
   episodeFileIds: z.array(z.number()).optional(),
 })
 
