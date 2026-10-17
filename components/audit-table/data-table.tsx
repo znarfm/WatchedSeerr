@@ -69,7 +69,11 @@ export function DataTable({ initialData }: DataTableProps) {
   const handleDelete = (item: AuditMediaItem) => {
     if (!confirm(`Are you sure you want to delete ${item.title}?`)) return
     startTransition(async () => {
-      const res = await deleteMediaAction({ id: item.id, tmdbId: item.tmdbId })
+      const res = await deleteMediaAction({
+        id: item.id,
+        tmdbId: item.tmdbId,
+        mediaType: item.mediaType,
+      })
       if (res.success) {
         setData((prev) => prev.filter((i) => i.id !== item.id))
         if (selectedItem?.id === item.id) setSelectedItem(null)

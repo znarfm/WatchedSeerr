@@ -17,3 +17,16 @@ Fetch for latest info/specs before implementation if needed:
 - shadcn/ui: https://ui.shadcn.com/llms.txt
 - React: https://react.dev/llms.txt
 
+## Environment & Tooling Quirk (Mise Node / pnpm)
+
+`pnpm` and `node` are managed by `mise` on this host. Non-login subshells or sandboxed runs will not find them in `$PATH` by default.
+
+When running terminal commands, always prefix with the exact binary path or prepend `$PATH`:
+```bash
+export PATH="/home/nard/.local/share/mise/installs/node/latest/bin:/home/nard/.local/share/mise/installs/pnpm/latest:$PATH"
+```
+- Package manager is **pnpm**, not bun.
+- Do not use `bun add` or `bun test`.
+- Run tests using `./node_modules/.bin/tsx --test tests/*.test.ts`.
+
+
