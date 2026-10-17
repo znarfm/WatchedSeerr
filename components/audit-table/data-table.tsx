@@ -693,7 +693,8 @@ export function DataTable({ initialData }: DataTableProps) {
                     table
                       .getFilteredSelectedRowModel()
                       .rows.filter(
-                        (r) => r.depth === 0 && !!r.original.isWhitelisted !== want
+                        (r) =>
+                          r.depth === 0 && !!r.original.isWhitelisted !== want
                       )
                       .forEach((r) => handleToggleWhitelist(r.original))
                     table.resetRowSelection()

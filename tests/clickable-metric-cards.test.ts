@@ -271,7 +271,9 @@ describe("Clickable Metric Cards & Table UX Seam", () => {
 
     // Metric cards rendered in responsive 5-card grid
     assert.ok(
-      html.includes("grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5"),
+      html.includes(
+        "grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5"
+      ),
       "Metric cards arranged in responsive grid"
     )
 

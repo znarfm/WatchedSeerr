@@ -37,7 +37,7 @@ export function NavHeader() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur px-4 py-2.5 transition-transform duration-200 ease-in-out sm:px-6 sm:py-3",
+        "sticky top-0 z-40 border-b border-border bg-background/95 px-4 py-2.5 backdrop-blur transition-transform duration-200 ease-in-out sm:px-6 sm:py-3",
         isVisible ? "translate-y-0" : "-translate-y-full"
       )}
     >

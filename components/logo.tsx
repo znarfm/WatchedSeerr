@@ -37,12 +37,7 @@ export function Logo({ className }: { className?: string }) {
         strokeWidth="1.5"
         className="stroke-primary-foreground"
       />
-      <circle
-        cx="16"
-        cy="16"
-        r="2"
-        className="fill-primary-foreground"
-      />
+      <circle cx="16" cy="16" r="2" className="fill-primary-foreground" />
       {/* Radar crosshairs */}
       <line
         x1="16"

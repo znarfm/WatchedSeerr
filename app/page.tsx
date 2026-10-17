@@ -26,11 +26,8 @@ export default async function Page() {
             <code className="font-mono text-foreground">.env.local</code> with
             valid{" "}
             <code className="font-mono text-foreground">JELLYFIN_URL</code>,{" "}
-            <code className="font-mono text-foreground">
-              JELLYFIN_API_KEY
-            </code>
-            , <code className="font-mono text-foreground">SEERR_URL</code>,
-            and{" "}
+            <code className="font-mono text-foreground">JELLYFIN_API_KEY</code>,{" "}
+            <code className="font-mono text-foreground">SEERR_URL</code>, and{" "}
             <code className="font-mono text-foreground">SEERR_API_KEY</code>{" "}
             credentials.
           </p>

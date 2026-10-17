@@ -51,9 +51,12 @@ export interface TableMeta {
 }
 
 function codecClass(q?: string) {
-  if (/hevc|h\.?265/i.test(q ?? "")) return "border border-emerald-500/30 bg-emerald-500/15 text-emerald-400"
-  if (/av1/i.test(q ?? "")) return "border border-violet-500/30 bg-violet-500/15 text-violet-400"
-  if (/h\.?264|avc/i.test(q ?? "")) return "border border-amber-500/30 bg-amber-500/15 text-amber-400"
+  if (/hevc|h\.?265/i.test(q ?? ""))
+    return "border border-emerald-500/30 bg-emerald-500/15 text-emerald-400"
+  if (/av1/i.test(q ?? ""))
+    return "border border-violet-500/30 bg-violet-500/15 text-violet-400"
+  if (/h\.?264|avc/i.test(q ?? ""))
+    return "border border-amber-500/30 bg-amber-500/15 text-amber-400"
   return ""
 }
 
