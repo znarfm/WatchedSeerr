@@ -1,5 +1,6 @@
 import { auditMedia } from "@/lib/audit"
 import { DataTable } from "@/components/audit-table/data-table"
+import { isDeleteDisabled } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -12,6 +13,8 @@ export default async function Page() {
   } catch (err: any) {
     errorMessage = err?.message || "Failed to connect to Jellyfin or Seerr API"
   }
+
+  const disableDelete = isDeleteDisabled()
 
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 space-y-4 p-3 sm:space-y-6 sm:p-6">
@@ -33,7 +36,7 @@ export default async function Page() {
           </p>
         </div>
       ) : report ? (
-        <DataTable initialData={report.items} />
+        <DataTable initialData={report.items} disableDelete={disableDelete} />
       ) : null}
     </main>
   )

@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { auditMedia } from "@/lib/audit"
 import { WatchMatrix } from "@/components/matrix-table/watch-matrix"
+import { isDeleteDisabled } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -19,6 +20,8 @@ export default async function MatrixPage() {
     errorMessage = err?.message || "Failed to load audit data"
   }
 
+  const disableDelete = isDeleteDisabled()
+
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 space-y-4 p-3 sm:space-y-6 sm:p-6">
       {errorMessage ? (
@@ -26,7 +29,12 @@ export default async function MatrixPage() {
           {errorMessage}
         </div>
       ) : (
-        report && <WatchMatrix initialData={report.items} />
+        report && (
+          <WatchMatrix
+            initialData={report.items}
+            disableDelete={disableDelete}
+          />
+        )
       )}
     </main>
   )

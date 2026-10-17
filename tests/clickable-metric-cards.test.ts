@@ -363,5 +363,26 @@ describe("Clickable Metric Cards & Table UX Seam", () => {
       html.includes("Rows per page:"),
       "Pagination footer includes rows-per-page label"
     )
+
+    // Delete buttons rendered when disableDelete is false
+    assert.ok(
+      html.includes("tabler-icon-trash"),
+      "Delete icon button rendered when disableDelete is not set"
+    )
+
+    const disabledHtml = renderToStaticMarkup(
+      React.createElement(
+        TooltipProvider,
+        null,
+        React.createElement(DataTable, {
+          initialData: mockItems,
+          disableDelete: true,
+        })
+      )
+    )
+    assert.ok(
+      !disabledHtml.includes("tabler-icon-trash"),
+      "Delete icon button is hidden when disableDelete is true"
+    )
   })
 })

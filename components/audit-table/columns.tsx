@@ -48,6 +48,7 @@ export interface TableMeta {
   onToggleExpand?: (item: AuditMediaItem) => void
   loadingEpisodes?: Record<string, boolean>
   isPending: boolean
+  disableDelete?: boolean
 }
 
 function codecClass(q?: string) {
@@ -502,34 +503,36 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
             </Tooltip>
           )}
 
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="size-7 text-rose-500 hover:bg-rose-500/10 hover:text-rose-600"
-                  disabled={meta?.isPending}
-                  onClick={() => {
-                    if (isSubRow) {
-                      meta?.onDelete(
-                        item,
-                        "single_episode",
-                        sonarrEpisodeFileId
-                      )
-                    } else {
-                      meta?.onDelete(item, "all")
-                    }
-                  }}
-                />
-              }
-            >
-              <IconTrash className="size-4" />
-            </TooltipTrigger>
-            <TooltipContent>
-              {isSubRow ? "Delete episode file" : "Delete media"}
-            </TooltipContent>
-          </Tooltip>
+          {!meta?.disableDelete && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-7 text-rose-500 hover:bg-rose-500/10 hover:text-rose-600"
+                    disabled={meta?.isPending}
+                    onClick={() => {
+                      if (isSubRow) {
+                        meta?.onDelete(
+                          item,
+                          "single_episode",
+                          sonarrEpisodeFileId
+                        )
+                      } else {
+                        meta?.onDelete(item, "all")
+                      }
+                    }}
+                  />
+                }
+              >
+                <IconTrash className="size-4" />
+              </TooltipTrigger>
+              <TooltipContent>
+                {isSubRow ? "Delete episode file" : "Delete media"}
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
       )
     },

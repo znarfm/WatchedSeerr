@@ -46,6 +46,7 @@ import {
   IconDeviceTv,
 } from "@tabler/icons-react"
 import { refreshAuditAction } from "@/lib/actions"
+import { isDeleteDisabled } from "@/lib/utils"
 import { cn } from "cn"
 import type { AuditMediaItem, ConflictStatus, UserPlaybackState } from "@/types"
 
@@ -144,9 +145,11 @@ export function getUserCellState(
 
 interface WatchMatrixProps {
   initialData: AuditMediaItem[]
+  disableDelete?: boolean
 }
 
-export function WatchMatrix({ initialData }: WatchMatrixProps) {
+export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
+  const effectiveDisableDelete = disableDelete ?? isDeleteDisabled()
   let router: any = null
   try {
     // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -810,6 +813,7 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
       {/* Shared Media Detail Sheet & Purge Dialog */}
       <MediaDetailSheet
         selectedItem={selectedItem}
+        disableDelete={effectiveDisableDelete}
         onClose={() => setSelectedItem(null)}
         onItemUpdated={(itemId, updates) => {
           setData((prev) =>

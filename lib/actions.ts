@@ -10,6 +10,7 @@ import { RadarrClient } from "@/lib/clients/radarr"
 import { SonarrClient } from "@/lib/clients/sonarr"
 import { JellyfinClient } from "@/lib/clients/jellyfin"
 import { invalidateAuditCache, normalizeVideoQuality } from "@/lib/audit"
+import { isDeleteDisabled } from "@/lib/utils"
 import type { AuditEpisodeItem, WatchStatus } from "@/types"
 
 export async function refreshAuditAction() {
@@ -129,6 +130,10 @@ export async function getSeriesEpisodesAction(
 }
 
 export async function deleteMediaAction(input: unknown) {
+  if (isDeleteDisabled()) {
+    return { success: false, error: "Delete functionality is disabled" }
+  }
+
   const parsed = deleteActionSchema.safeParse(input)
   if (!parsed.success) {
     return { success: false, error: parsed.error.format() }

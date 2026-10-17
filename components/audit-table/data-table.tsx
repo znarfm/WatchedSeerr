@@ -56,6 +56,7 @@ import {
   getSeriesEpisodesAction,
   refreshAuditAction,
 } from "@/lib/actions"
+import { isDeleteDisabled } from "@/lib/utils"
 import type { AuditMediaItem, ConflictStatus } from "@/types"
 import { cn } from "cn"
 import {
@@ -115,9 +116,11 @@ export function resolveStatusCardClick(
 
 interface DataTableProps {
   initialData: AuditMediaItem[]
+  disableDelete?: boolean
 }
 
-export function DataTable({ initialData }: DataTableProps) {
+export function DataTable({ initialData, disableDelete }: DataTableProps) {
+  const effectiveDisableDelete = disableDelete ?? isDeleteDisabled()
   let router: any = null
   try {
     // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -245,6 +248,7 @@ export function DataTable({ initialData }: DataTableProps) {
     target: "all" | "single_episode" = "all",
     episodeFileId?: number
   ) => {
+    if (effectiveDisableDelete) return
     setDeleteCandidate({ item, target, episodeFileId })
   }
 
@@ -350,6 +354,7 @@ export function DataTable({ initialData }: DataTableProps) {
       onToggleExpand: handleToggleExpand,
       loadingEpisodes,
       isPending,
+      disableDelete: effectiveDisableDelete,
     } satisfies TableMeta,
   })
 
@@ -892,6 +897,7 @@ export function DataTable({ initialData }: DataTableProps) {
       {/* Shared Media Detail Sheet & Purge Dialog */}
       <MediaDetailSheet
         selectedItem={selectedItem}
+        disableDelete={effectiveDisableDelete}
         onClose={() => setSelectedItem(null)}
         onItemUpdated={(itemId, updates) => {
           setData((prev) =>

@@ -174,4 +174,28 @@ describe("Jellyfin Filter & TV Hierarchy Seam", () => {
       globalThis.fetch = originalFetch
     }
   })
+
+  it("deleteMediaAction is rejected when DISABLE_DELETE is enabled", async () => {
+    const prevEnv = process.env.DISABLE_DELETE
+    try {
+      process.env.DISABLE_DELETE = "true"
+
+      const res = await deleteMediaAction({
+        id: "ep-123",
+        tmdbId: 1396,
+        mediaType: "tv",
+        target: "single_episode",
+        episodeFileId: 5001,
+      })
+
+      assert.equal(res.success, false)
+      assert.equal((res as any).error, "Delete functionality is disabled")
+    } finally {
+      if (prevEnv !== undefined) {
+        process.env.DISABLE_DELETE = prevEnv
+      } else {
+        delete process.env.DISABLE_DELETE
+      }
+    }
+  })
 })

@@ -26,7 +26,7 @@ import { toast } from "@/components/ui/toast"
 import { toggleWhitelistAction, deleteMediaAction } from "@/lib/actions"
 import type { AuditMediaItem, MediaExternalLinks } from "@/types"
 import { IconExternalLink } from "@tabler/icons-react"
-import { cn, formatMediaSize } from "@/lib/utils"
+import { cn, formatMediaSize, isDeleteDisabled } from "@/lib/utils"
 
 export interface DeleteTarget {
   item: AuditMediaItem
@@ -41,6 +41,7 @@ export interface MediaDetailSheetProps {
   onItemDeleted: (target: DeleteTarget) => void
   deleteCandidate?: DeleteTarget | null
   onDeleteCandidateChange?: (candidate: DeleteTarget | null) => void
+  disableDelete?: boolean
 }
 
 export function resolveExternalLinks(item: AuditMediaItem): MediaExternalLinks {
@@ -65,6 +66,7 @@ export interface MediaDetailSheetBodyProps {
   onToggleWhitelist?: () => void
   onPurge?: () => void
   isPending?: boolean
+  disableDelete?: boolean
 }
 
 export function MediaDetailSheetBody({
@@ -72,7 +74,9 @@ export function MediaDetailSheetBody({
   onToggleWhitelist,
   onPurge,
   isPending = false,
+  disableDelete,
 }: MediaDetailSheetBodyProps) {
+  const effectiveDisableDelete = disableDelete ?? isDeleteDisabled()
   const links = resolveExternalLinks(selectedItem)
   const formattedSize = formatMediaSize(selectedItem.sizeBytes)
 
@@ -376,14 +380,16 @@ export function MediaDetailSheetBody({
         >
           {selectedItem.isWhitelisted ? "Remove Whitelist" : "Whitelist Media"}
         </Button>
-        <Button
-          variant="destructive"
-          size="sm"
-          disabled={isPending}
-          onClick={onPurge}
-        >
-          Purge Media
-        </Button>
+        {!effectiveDisableDelete && (
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={isPending}
+            onClick={onPurge}
+          >
+            Purge Media
+          </Button>
+        )}
       </SheetFooter>
     </>
   )
@@ -396,7 +402,9 @@ export function MediaDetailSheet({
   onItemDeleted,
   deleteCandidate,
   onDeleteCandidateChange,
+  disableDelete,
 }: MediaDetailSheetProps) {
+  const effectiveDisableDelete = disableDelete ?? isDeleteDisabled()
   const [isPending, startTransition] = React.useTransition()
   const [internalCandidate, setInternalCandidate] =
     React.useState<DeleteTarget | null>(null)
@@ -463,12 +471,12 @@ export function MediaDetailSheet({
   }
 
   const handlePurge = () => {
-    if (!selectedItem) return
+    if (effectiveDisableDelete || !selectedItem) return
     setCandidate({ item: selectedItem, target: "all" })
   }
 
   const confirmDelete = () => {
-    if (!candidate) return
+    if (effectiveDisableDelete || !candidate) return
     const currentCandidate = candidate
     startTransition(async () => {
       try {
@@ -539,54 +547,57 @@ export function MediaDetailSheet({
               onToggleWhitelist={handleToggleWhitelist}
               onPurge={handlePurge}
               isPending={isPending}
+              disableDelete={effectiveDisableDelete}
             />
           </SheetContent>
         )}
       </Sheet>
 
       {/* Confirmation Dialog for Purge */}
-      <Dialog
-        open={!!candidate}
-        onOpenChange={(open) => !open && setCandidate(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {candidate?.target === "single_episode"
-                ? "Confirm Episode Purge"
-                : "Confirm Media Purge"}
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to permanently delete{" "}
-              <span className="font-semibold text-foreground">
-                {candidate?.item.title}
-              </span>
-              ?{" "}
-              {candidate?.target === "single_episode"
-                ? "This will delete this episode file from Sonarr disk storage."
-                : "This triggers immediate deletion in Radarr/Sonarr and purges local files."}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-4 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isPending}
-              onClick={() => setCandidate(null)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              disabled={isPending}
-              onClick={confirmDelete}
-            >
-              Confirm Purge
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {!effectiveDisableDelete && (
+        <Dialog
+          open={!!candidate}
+          onOpenChange={(open) => !open && setCandidate(null)}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {candidate?.target === "single_episode"
+                  ? "Confirm Episode Purge"
+                  : "Confirm Media Purge"}
+              </DialogTitle>
+              <DialogDescription>
+                Are you sure you want to permanently delete{" "}
+                <span className="font-semibold text-foreground">
+                  {candidate?.item.title}
+                </span>
+                ?{" "}
+                {candidate?.target === "single_episode"
+                  ? "This will delete this episode file from Sonarr disk storage."
+                  : "This triggers immediate deletion in Radarr/Sonarr and purges local files."}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="mt-4 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isPending}
+                onClick={() => setCandidate(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={isPending}
+                onClick={confirmDelete}
+              >
+                Confirm Purge
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   )
 }

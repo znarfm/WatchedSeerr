@@ -341,6 +341,19 @@ describe("MediaDetailSheet Seam", () => {
         whitelistedHtml.includes("Remove Whitelist"),
         "Button says Remove Whitelist when whitelisted"
       )
+
+      const disabledHtml = renderBody({
+        selectedItem: mockMovie,
+        disableDelete: true,
+      })
+      assert.ok(
+        !disabledHtml.includes("Purge Media"),
+        "Purge Media button is hidden when disableDelete is true"
+      )
+      assert.ok(
+        disabledHtml.includes("Whitelist Media"),
+        "Whitelist button remains when disableDelete is true"
+      )
     })
   })
 })

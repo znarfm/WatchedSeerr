@@ -13,6 +13,14 @@ export const envSchema = z.object({
   CRON_SECRET: z.string().min(1).optional(),
   GHOST_THRESHOLD_DAYS: z.coerce.number().default(30),
   CONFLICT_THRESHOLD_DAYS: z.coerce.number().default(60),
+  DISABLE_DELETE: z
+    .preprocess((val) => {
+      if (typeof val === "string") {
+        return ["true", "1", "yes", "on"].includes(val.toLowerCase().trim())
+      }
+      return Boolean(val)
+    }, z.boolean())
+    .default(false),
 })
 
 export type ValidatedEnv = z.infer<typeof envSchema>

@@ -17,6 +17,17 @@ describe("Zod Validation Seam", () => {
     if (result.success) {
       assert.equal(result.data.GHOST_THRESHOLD_DAYS, 30)
       assert.equal(result.data.CONFLICT_THRESHOLD_DAYS, 60)
+      assert.equal(result.data.DISABLE_DELETE, false)
+    }
+
+    const disabledEnv = {
+      ...validEnv,
+      DISABLE_DELETE: "true",
+    }
+    const disabledResult = envSchema.safeParse(disabledEnv)
+    assert.equal(disabledResult.success, true)
+    if (disabledResult.success) {
+      assert.equal(disabledResult.data.DISABLE_DELETE, true)
     }
   })
 

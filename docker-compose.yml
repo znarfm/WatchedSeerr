@@ -21,5 +21,6 @@ services:
       - CRON_SECRET=${CRON_SECRET:-}
       - GHOST_THRESHOLD_DAYS=${GHOST_THRESHOLD_DAYS:-30}
       - CONFLICT_THRESHOLD_DAYS=${CONFLICT_THRESHOLD_DAYS:-60}
+      - DISABLE_DELETE=${DISABLE_DELETE:-false}
     volumes:
       - ./data:/app/data
