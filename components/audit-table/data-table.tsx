@@ -185,13 +185,11 @@ export function DataTable({ initialData }: DataTableProps) {
 
     setLoadingEpisodes((prev) => ({ ...prev, [item.id]: true }))
     try {
-      const res = await (
-        getSeriesEpisodesAction as (
-          jItemId: string,
-          tmdbId: number,
-          userId?: string
-        ) => Promise<any>
-      )(item.jellyfinItemId, item.tmdbId, item.requester.matchedJellyfinUserId)
+      const res = await getSeriesEpisodesAction(
+        item.jellyfinItemId,
+        item.tmdbId,
+        item.requester.matchedJellyfinUserId
+      )
 
       if (res.success && res.episodes) {
         const episodeSubRows: AuditMediaItem[] = res.episodes.map((ep: any) => {
