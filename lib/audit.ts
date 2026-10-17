@@ -9,6 +9,7 @@ import type {
   JellyfinUser,
   MediaExternalLinks,
   MediaType,
+  SeerrRequest,
   SeerrUser,
   UserPlaybackState,
   WatchStatus,

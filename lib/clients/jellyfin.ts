@@ -56,7 +56,10 @@ export class JellyfinClient {
       const items = res.Items || []
       allItems.push(...items)
 
-      if (items.length < limit || (res.TotalRecordCount && allItems.length >= res.TotalRecordCount)) {
+      if (
+        items.length < limit ||
+        (res.TotalRecordCount && allItems.length >= res.TotalRecordCount)
+      ) {
         break
       }
       startIndex += limit
@@ -80,7 +83,10 @@ export class JellyfinClient {
       const items = res.Items || []
       allItems.push(...items)
 
-      if (items.length < limit || (res.TotalRecordCount && allItems.length >= res.TotalRecordCount)) {
+      if (
+        items.length < limit ||
+        (res.TotalRecordCount && allItems.length >= res.TotalRecordCount)
+      ) {
         break
       }
       startIndex += limit

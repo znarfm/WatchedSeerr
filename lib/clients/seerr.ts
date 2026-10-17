@@ -57,7 +57,10 @@ export class SeerrClient {
       const results = data.results || []
       allResults.push(...results)
 
-      if (results.length < take || allResults.length >= (data.pageInfo?.results || 0)) {
+      if (
+        results.length < take ||
+        allResults.length >= (data.pageInfo?.results || 0)
+      ) {
         break
       }
       skip += take

@@ -6,65 +6,68 @@ async function runTestAudit() {
   console.log("=== WatchedSeerr CLI Audit Test ===")
 
   const mockSeerr: Partial<SeerrClient> = {
-    getRequests: async () => [
-      {
-        id: 101,
-        status: 2,
-        media: {
-          id: 501,
-          tmdbId: 157336, // Interstellar
-          status: 5,
-          mediaType: "movie",
+    getRequests: async () => ({
+      pageInfo: { page: 1, pages: 1, pageSize: 3, results: 3 },
+      results: [
+        {
+          id: 101,
+          status: 2,
+          media: {
+            id: 501,
+            tmdbId: 157336, // Interstellar
+            status: 5,
+            mediaType: "movie",
+            createdAt: new Date(Date.now() - 40 * 86400000).toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
           createdAt: new Date(Date.now() - 40 * 86400000).toISOString(),
           updatedAt: new Date().toISOString(),
+          requestedBy: {
+            id: 1,
+            username: "alice",
+          },
+          is4k: false,
         },
-        createdAt: new Date(Date.now() - 40 * 86400000).toISOString(),
-        updatedAt: new Date().toISOString(),
-        requestedBy: {
-          id: 1,
-          username: "alice",
-        },
-        is4k: false,
-      },
-      {
-        id: 102,
-        status: 2,
-        media: {
-          id: 502,
-          tmdbId: 94605, // Arcane
-          status: 5,
-          mediaType: "tv",
+        {
+          id: 102,
+          status: 2,
+          media: {
+            id: 502,
+            tmdbId: 94605, // Arcane
+            status: 5,
+            mediaType: "tv",
+            createdAt: new Date(Date.now() - 50 * 86400000).toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
           createdAt: new Date(Date.now() - 50 * 86400000).toISOString(),
           updatedAt: new Date().toISOString(),
+          requestedBy: {
+            id: 2,
+            username: "bob",
+          },
+          is4k: false,
         },
-        createdAt: new Date(Date.now() - 50 * 86400000).toISOString(),
-        updatedAt: new Date().toISOString(),
-        requestedBy: {
-          id: 2,
-          username: "bob",
-        },
-        is4k: false,
-      },
-      {
-        id: 103,
-        status: 2,
-        media: {
-          id: 503,
-          tmdbId: 603, // The Matrix
-          status: 5,
-          mediaType: "movie",
+        {
+          id: 103,
+          status: 2,
+          media: {
+            id: 503,
+            tmdbId: 603, // The Matrix
+            status: 5,
+            mediaType: "movie",
+            createdAt: new Date(Date.now() - 100 * 86400000).toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
           createdAt: new Date(Date.now() - 100 * 86400000).toISOString(),
           updatedAt: new Date().toISOString(),
+          requestedBy: {
+            id: 3,
+            username: "charlie",
+          },
+          is4k: false,
         },
-        createdAt: new Date(Date.now() - 100 * 86400000).toISOString(),
-        updatedAt: new Date().toISOString(),
-        requestedBy: {
-          id: 3,
-          username: "charlie",
-        },
-        is4k: false,
-      },
-    ],
+      ],
+    }),
     getMediaDetails: async (mediaType: "movie" | "tv", tmdbId: number) => {
       const titles: Record<number, string> = {
         157336: "Interstellar",

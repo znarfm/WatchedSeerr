@@ -588,7 +588,7 @@ export function MediaDetailSheet({
             </DialogHeader>
 
             {candidate?.target !== "single_episode" && (
-              <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
+              <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground select-none hover:text-foreground">
                 <Checkbox
                   checked={removeFromLibrary}
                   onCheckedChange={(checked) => setRemoveFromLibrary(!!checked)}

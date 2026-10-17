@@ -1,17 +1,18 @@
 FROM node:22-alpine AS base
+RUN npm install -g pnpm@10
 
 FROM base AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-COPY package.json pnpm-lock.yaml* bun.lock* ./
-RUN npm install -g bun && bun install --frozen-lockfile || npm install
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm install -g bun && bun run build
+RUN pnpm build
 
 FROM base AS runner
 WORKDIR /app
