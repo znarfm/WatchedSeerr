@@ -50,8 +50,17 @@ pnpm dlx tsx --test tests/db.test.ts tests/validation.test.ts
 
 ---
 
-## Docker Deployment
+## Deployment
+
+Full deployment guide: [docs/deployment.md](docs/deployment.md).
+
+### Proxmox VE (Recommended)
+Run inside an **unprivileged Docker LXC** (~150MB RAM, zero host pollution, clean native SQLite isolation). Avoid running directly on the Proxmox host. See [docs/deployment.md](docs/deployment.md) for automated 1-line LXC setup or baremetal LXC systemd service instructions.
+
+### Docker Compose
 ```bash
+cp .env.example .env
+# Edit .env with your endpoints & API keys
 docker compose up -d --build
 ```
 Persists SQLite database to `./data/watchedseerr.db`.
@@ -64,4 +73,4 @@ Runs headless audit and dispatches Discord webhook embed.
 # Proxmox / crontab entry (daily at 4 AM)
 0 4 * * * curl -s -X POST http://localhost:3000/api/cron -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
-See [docs/proxmox-cron.md](docs/proxmox-cron.md) for host setup.
+See [docs/proxmox-cron.md](docs/proxmox-cron.md) for secret generation and host cron setup.
