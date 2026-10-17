@@ -1,4 +1,4 @@
-import type { SeerrRequest, SeerrRequestResponse } from "@/types"
+import type { SeerrRequest, SeerrRequestResponse, SeerrUser } from "@/types"
 
 export class SeerrClient {
   private baseUrl: string
@@ -34,6 +34,13 @@ export class SeerrClient {
   async getRequests(take = 200, filter = "all"): Promise<SeerrRequest[]> {
     const data = await this.request<SeerrRequestResponse>(
       `/api/v1/request?take=${take}&filter=${filter}&sort=added`
+    )
+    return data.results || []
+  }
+
+  async getUsers(take = 100): Promise<SeerrUser[]> {
+    const data = await this.request<{ results: SeerrUser[] }>(
+      `/api/v1/user?take=${take}`
     )
     return data.results || []
   }

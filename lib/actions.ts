@@ -6,7 +6,19 @@ import { toggleWhitelistSchema, deleteActionSchema } from "@/lib/validation/acti
 import { RadarrClient } from "@/lib/clients/radarr"
 import { SonarrClient } from "@/lib/clients/sonarr"
 import { JellyfinClient } from "@/lib/clients/jellyfin"
+import { invalidateAuditCache } from "@/lib/audit"
 import type { AuditEpisodeItem, WatchStatus } from "@/types"
+
+export async function refreshAuditAction() {
+  invalidateAuditCache()
+  try {
+    revalidatePath("/")
+    revalidatePath("/matrix")
+  } catch {
+    // Outside Next.js request context (e.g. tests)
+  }
+  return { success: true }
+}
 
 export async function toggleWhitelistAction(input: unknown) {
   const parsed = toggleWhitelistSchema.safeParse(input)
@@ -15,6 +27,7 @@ export async function toggleWhitelistAction(input: unknown) {
   }
 
   const isWhitelisted = toggleWhitelistItem(parsed.data)
+  invalidateAuditCache()
   try {
     revalidatePath("/")
     revalidatePath("/matrix")
@@ -24,13 +37,17 @@ export async function toggleWhitelistAction(input: unknown) {
   return { success: true, isWhitelisted }
 }
 
-export async function getSeriesEpisodesAction(jellyfinItemId: string, seriesTmdbId: number) {
+export async function getSeriesEpisodesAction(
+  jellyfinItemId: string,
+  seriesTmdbId: number,
+  userId?: string
+) {
   try {
     const jellyfin = new JellyfinClient()
     const sonarr = new SonarrClient()
 
     const [jellyfinEpisodes, sonarrSeries] = await Promise.all([
-      jellyfin.getEpisodes(jellyfinItemId),
+      jellyfin.getEpisodes(jellyfinItemId, userId),
       sonarr.isConfigured() ? sonarr.getSeriesByTmdbId(seriesTmdbId) : Promise.resolve(null),
     ])
 
@@ -46,7 +63,7 @@ export async function getSeriesEpisodesAction(jellyfinItemId: string, seriesTmdb
 
       let status: WatchStatus = "unplayed"
       let progressPercent = 0
-      if (userData?.Played) {
+      if (userData?.Played || (userData?.PlayCount || 0) > 0) {
         status = "completed"
         progressPercent = 100
       } else if (userData?.PlaybackPositionTicks && ep.RunTimeTicks) {
@@ -134,6 +151,7 @@ export async function deleteMediaAction(input: unknown) {
   }
 
   console.log(`[WatchedSeerr] Purged media: ${id} (${details})`)
+  invalidateAuditCache()
   try {
     revalidatePath("/")
     revalidatePath("/matrix")

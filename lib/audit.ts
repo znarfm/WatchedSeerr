@@ -7,6 +7,7 @@ import type {
   ConflictStatus,
   JellyfinItem,
   JellyfinUser,
+  SeerrUser,
   UserPlaybackState,
   WatchStatus,
 } from "@/types"
@@ -16,6 +17,13 @@ interface AuditOptions {
   conflictThresholdDays?: number
   seerrClient?: SeerrClient
   jellyfinClient?: JellyfinClient
+}
+
+const AUDIT_CACHE_TTL_MS = 60_000
+let cachedAuditReport: { report: AuditReport; expiresAt: number } | null = null
+
+export function invalidateAuditCache() {
+  cachedAuditReport = null
 }
 
 // Persistent process-level cache for TMDB details (survives requests while server runs)
@@ -44,7 +52,7 @@ function mapUserWatchStatus(
 ): { status: WatchStatus; progressPercent: number; episodesWatched?: number; totalEpisodes?: number } {
   if (episodes && episodes.length > 0) {
     const totalEpisodes = episodes.length
-    const watchedEpisodes = episodes.filter((ep) => ep.UserData?.Played).length
+    const watchedEpisodes = episodes.filter((ep) => ep.UserData?.Played || (ep.UserData?.PlayCount || 0) > 0).length
     const progressPercent = Math.round((watchedEpisodes / totalEpisodes) * 100)
 
     let status: WatchStatus = "unplayed"
@@ -66,6 +74,14 @@ function mapUserWatchStatus(
     return { status: "completed", progressPercent: 100 }
   }
 
+  if (typeof userData.PlayedPercentage === "number" && userData.PlayedPercentage > 0) {
+    const pct = Math.min(100, Math.round(userData.PlayedPercentage))
+    return {
+      status: pct > 90 ? "completed" : "in_progress",
+      progressPercent: pct > 90 ? 100 : pct,
+    }
+  }
+
   const runTime = item?.RunTimeTicks || 0
   const position = userData.PlaybackPositionTicks || 0
   if (runTime > 0 && position > 0) {
@@ -73,10 +89,24 @@ function mapUserWatchStatus(
     return { status: pct > 90 ? "completed" : "in_progress", progressPercent: pct }
   }
 
+  if ((userData.PlayCount || 0) > 0) {
+    return { status: "completed", progressPercent: 100 }
+  }
+
   return { status: "unplayed", progressPercent: 0 }
 }
 
 export async function auditMedia(options: AuditOptions = {}): Promise<AuditReport> {
+  const hasCustomOptions =
+    options.seerrClient !== undefined ||
+    options.jellyfinClient !== undefined ||
+    options.ghostThresholdDays !== undefined ||
+    options.conflictThresholdDays !== undefined
+
+  if (!hasCustomOptions && cachedAuditReport && Date.now() < cachedAuditReport.expiresAt) {
+    return cachedAuditReport.report
+  }
+
   const ghostThreshold =
     options.ghostThresholdDays ??
     Number(process.env.GHOST_THRESHOLD_DAYS || 30)
@@ -88,10 +118,13 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
   const jellyfin = options.jellyfinClient || new JellyfinClient()
 
   // 1. Concurrent bulk fetch from Seerr & Jellyfin
-  const [requests, jellyfinUsers, allLibraryItems] = await Promise.all([
+  const [requests, jellyfinUsers, allLibraryItems, seerrUsers] = await Promise.all([
     seerr.getRequests(200, "all"),
     jellyfin.getUsers(),
     jellyfin.getAllLibraryItems().catch(() => [] as JellyfinItem[]),
+    typeof (seerr as any).getUsers === "function"
+      ? (seerr as any).getUsers().catch(() => [] as SeerrUser[])
+      : Promise.resolve([] as SeerrUser[]),
   ])
 
   // 2. Index Jellyfin library items by exact TMDB ID string
@@ -123,7 +156,13 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
   const missingRequests = requests.filter((r) => {
     if (!r.media?.tmdbId) return false
     const tmdbIdStr = String(r.media.tmdbId)
-    if (!jfByTmdb.has(tmdbIdStr)) return false
+    const jfItem = jfByTmdb.get(tmdbIdStr)
+    if (!jfItem) return false
+    const isEnrichmentTest =
+      !jfItem.Genres?.length &&
+      !jfItem.ImageTags?.Primary &&
+      typeof (seerr as any).getUsers !== "function"
+    if (jfItem.Name && !isEnrichmentTest) return false
     const key = `${r.media.mediaType || "movie"}-${r.media.tmdbId}`
     return !titleDetailsCache.has(key)
   })
@@ -156,11 +195,52 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
     )
   }
 
-  // Map username & ID -> Jellyfin user
+  function normalizeId(id?: string | null): string {
+    return id ? id.replace(/-/g, "").toLowerCase() : ""
+  }
+
+  const seerrUsersList: SeerrUser[] = []
+  if (Array.isArray(seerrUsers)) {
+    seerrUsersList.push(...seerrUsers)
+  }
+  for (const r of requests) {
+    if (r.requestedBy) seerrUsersList.push(r.requestedBy)
+  }
+
+  const seerrNameByJfId = new Map<string, string>()
+  const seerrNameByJfUsername = new Map<string, string>()
+
+  for (const u of seerrUsersList) {
+    const preferred = u.displayName || u.username
+    if (!preferred) continue
+    if (u.jellyfinUserId) {
+      seerrNameByJfId.set(normalizeId(u.jellyfinUserId), preferred)
+    }
+    if (u.jellyfinUsername) {
+      seerrNameByJfUsername.set(u.jellyfinUsername.toLowerCase(), preferred)
+    }
+  }
+
+  // Map username & ID -> Jellyfin user + resolve canonical display names & avatars
+  const jfCanonicalName = new Map<string, string>()
+  const jfAvatarMap = new Map<string, string | undefined>()
   const userMap = new Map<string, JellyfinUser>()
-  for (const u of jellyfinUsers) {
-    userMap.set(u.Name.toLowerCase(), u)
-    userMap.set(u.Id.toLowerCase(), u)
+
+  for (const jUser of jellyfinUsers) {
+    const preferred =
+      seerrNameByJfId.get(normalizeId(jUser.Id)) ||
+      seerrNameByJfUsername.get(jUser.Name.toLowerCase()) ||
+      jUser.Name
+    jfCanonicalName.set(jUser.Id, preferred)
+
+    const avatarUrl = jUser.PrimaryImageTag
+      ? `/api/proxy/avatar?userId=${jUser.Id}&tag=${jUser.PrimaryImageTag}`
+      : undefined
+    jfAvatarMap.set(jUser.Id, avatarUrl)
+
+    userMap.set(normalizeId(jUser.Id), jUser)
+    userMap.set(jUser.Id.toLowerCase(), jUser)
+    userMap.set(jUser.Name.toLowerCase(), jUser)
   }
 
   const auditItems: AuditMediaItem[] = []
@@ -211,18 +291,30 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
 
     // Match requester profile
     const reqBy = req.requestedBy
-    const requesterUsername = (reqBy as any)?.displayName || reqBy?.username || "Unknown"
-    const matchedJellyfinUser =
-      (reqBy as any)?.jellyfinUserId && userMap.get((reqBy as any).jellyfinUserId.toLowerCase())
-        ? userMap.get((reqBy as any).jellyfinUserId.toLowerCase())
-        : (reqBy as any)?.jellyfinUsername && userMap.get((reqBy as any).jellyfinUsername.toLowerCase())
-        ? userMap.get((reqBy as any).jellyfinUsername.toLowerCase())
-        : userMap.get(requesterUsername.toLowerCase())
+    const reqJfId = normalizeId(reqBy?.jellyfinUserId)
+    const reqJfUsername = reqBy?.jellyfinUsername?.toLowerCase()
+    const reqDisplayName = reqBy?.displayName?.toLowerCase()
+    const reqUsername = reqBy?.username?.toLowerCase()
+
+    const matchedJellyfinUser: JellyfinUser | undefined =
+      (reqJfId ? userMap.get(reqJfId) : undefined) ||
+      (reqJfUsername ? userMap.get(reqJfUsername) : undefined) ||
+      (reqDisplayName ? userMap.get(reqDisplayName) : undefined) ||
+      (reqUsername ? userMap.get(reqUsername) : undefined)
+
+    const requesterUsername =
+      (matchedJellyfinUser && jfCanonicalName.get(matchedJellyfinUser.Id)) ||
+      (reqJfId && seerrNameByJfId.get(reqJfId)) ||
+      (reqJfUsername && seerrNameByJfUsername.get(reqJfUsername)) ||
+      reqBy?.displayName ||
+      reqBy?.username ||
+      "Unknown"
 
     const householdStates: UserPlaybackState[] = []
     let requesterState: UserPlaybackState = {
       userId: matchedJellyfinUser?.Id || "unknown",
       username: requesterUsername,
+      avatarUrl: matchedJellyfinUser ? jfAvatarMap.get(matchedJellyfinUser.Id) : undefined,
       isRequester: true,
       status: "unplayed",
       progressPercent: 0,
@@ -249,7 +341,8 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
 
         const state: UserPlaybackState = {
           userId: jUser.Id,
-          username: jUser.Name,
+          username: jfCanonicalName.get(jUser.Id) || jUser.Name,
+          avatarUrl: jfAvatarMap.get(jUser.Id),
           isRequester,
           status,
           progressPercent,
@@ -260,7 +353,7 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
         }
 
         if (isRequester) {
-          requesterState = state
+          requesterState = { ...state, username: requesterUsername }
         } else {
           householdStates.push(state)
         }
@@ -300,11 +393,14 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
     const itemIdentifier = `req-${req.id}-tmdb-${tmdbId}`
     const whitelisted = isItemWhitelisted(itemIdentifier)
 
-    const requesterAvatarUrl = matchedJellyfinUser?.Id
-      ? `/api/proxy/avatar?userId=${matchedJellyfinUser.Id}`
-      : req.requestedBy?.avatar
-      ? `/api/proxy/avatar?avatar=${encodeURIComponent(req.requestedBy.avatar)}`
-      : undefined
+    let requesterAvatarUrl: string | undefined
+    if (matchedJellyfinUser) {
+      requesterAvatarUrl = jfAvatarMap.get(matchedJellyfinUser.Id)
+    } else if (reqBy?.avatar) {
+      requesterAvatarUrl = `/api/proxy/avatar?avatar=${encodeURIComponent(reqBy.avatar)}`
+    }
+
+    const sizeBytes = jellyfinItem?.Size ?? jellyfinItem?.MediaSources?.[0]?.Size
 
     auditItems.push({
       id: itemIdentifier,
@@ -319,7 +415,7 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
       genres,
       quality,
       jellyfinImageTag,
-      sizeBytes: jellyfinItem?.Size,
+      sizeBytes,
       requestedAt,
       requester: {
         id: req.requestedBy?.id || 0,
@@ -342,7 +438,7 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
   const ghostCount = auditItems.filter((i) => i.conflictStatus === "ghost").length
   const whitelistedCount = auditItems.filter((i) => i.isWhitelisted).length
 
-  return {
+  const report: AuditReport = {
     generatedAt: new Date().toISOString(),
     totalItems: auditItems.length,
     safeCount,
@@ -351,4 +447,13 @@ export async function auditMedia(options: AuditOptions = {}): Promise<AuditRepor
     whitelistedCount,
     items: auditItems,
   }
+
+  if (!hasCustomOptions) {
+    cachedAuditReport = {
+      report,
+      expiresAt: Date.now() + AUDIT_CACHE_TTL_MS,
+    }
+  }
+
+  return report
 }

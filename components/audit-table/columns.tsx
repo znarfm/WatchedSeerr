@@ -1,4 +1,4 @@
-import type { ColumnDef } from "@tanstack/react-table"
+import type { Column, ColumnDef } from "@tanstack/react-table"
 import type { AuditMediaItem } from "@/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -17,11 +17,12 @@ import {
   IconDeviceTv,
   IconMovie,
   IconTrash,
-  IconUser,
   IconAlertTriangle,
   IconCheck,
   IconGhost,
   IconArrowsSort,
+  IconArrowUp,
+  IconArrowDown,
   IconChevronDown,
   IconChevronRight,
   IconLoader2,
@@ -34,6 +35,37 @@ export interface TableMeta {
   onToggleExpand?: (item: AuditMediaItem) => void
   loadingEpisodes?: Record<string, boolean>
   isPending: boolean
+}
+
+export function sortInactiveDays(
+  a: number | null | undefined,
+  b: number | null | undefined
+): number {
+  const valA = a === null || a === undefined ? Number.POSITIVE_INFINITY : a
+  const valB = b === null || b === undefined ? Number.POSITIVE_INFINITY : b
+  if (valA === valB) return 0
+  return valA - valB
+}
+
+function SortHeader({ column, title }: { column: Column<AuditMediaItem, any>; title: string }) {
+  const isSorted = column.getIsSorted()
+  return (
+    <Button
+      variant="ghost"
+      size="xs"
+      className="text-[11px] font-semibold uppercase tracking-wider p-0 hover:bg-transparent"
+      onClick={() => column.toggleSorting(isSorted === "asc")}
+    >
+      {title}
+      {isSorted === "asc" ? (
+        <IconArrowUp className="ml-1 size-3" />
+      ) : isSorted === "desc" ? (
+        <IconArrowDown className="ml-1 size-3" />
+      ) : (
+        <IconArrowsSort className="ml-1 size-3" />
+      )}
+    </Button>
+  )
 }
 
 export const columns: ColumnDef<AuditMediaItem>[] = [
@@ -65,18 +97,9 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
     enableHiding: false,
   },
   {
+    id: "title",
     accessorKey: "title",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        size="xs"
-        className="text-[11px] font-semibold uppercase tracking-wider p-0 hover:bg-transparent"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Media
-        <IconArrowsSort className="ml-1 size-3" />
-      </Button>
-    ),
+    header: ({ column }) => <SortHeader column={column} title="Media" />,
     cell: ({ row, table }) => {
       const item = row.original
       const meta = table.options.meta as TableMeta | undefined
@@ -123,7 +146,9 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
 
           {(() => {
             const posterUrl = item.jellyfinItemId
-              ? `/api/proxy/poster?jellyfinItemId=${item.jellyfinItemId}`
+              ? `/api/proxy/poster?jellyfinItemId=${item.jellyfinItemId}${
+                  item.jellyfinImageTag ? `&tag=${encodeURIComponent(item.jellyfinImageTag)}` : ""
+                }`
               : item.posterPath
               ? `/api/proxy/poster?posterPath=${encodeURIComponent(item.posterPath)}`
               : item.tmdbId
@@ -173,18 +198,13 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
     enableHiding: true,
   },
   {
-    accessorKey: "requester.username",
     id: "requester",
-    header: "Requester",
+    accessorFn: (row) => row.requester.username,
+    header: ({ column }) => <SortHeader column={column} title="Requester" />,
+    filterFn: "equalsString",
     cell: ({ row }) => {
       const item = row.original
-      const avatarSrc = item.requester.requesterAvatarUrl || (
-        item.requester.matchedJellyfinUserId
-          ? `/api/proxy/avatar?userId=${item.requester.matchedJellyfinUserId}`
-          : item.requester.avatar
-          ? `/api/proxy/avatar?avatar=${encodeURIComponent(item.requester.avatar)}`
-          : undefined
-      )
+      const avatarSrc = item.requester.requesterAvatarUrl
 
       return (
         <div className="flex items-center gap-2">
@@ -200,19 +220,13 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
     },
   },
   {
-    accessorKey: "requesterState.progressPercent",
     id: "progress",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        size="xs"
-        className="text-[11px] font-semibold uppercase tracking-wider p-0 hover:bg-transparent"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Requester Progress
-        <IconArrowsSort className="ml-1 size-3" />
-      </Button>
-    ),
+    accessorFn: (row) => row.requesterState.progressPercent,
+    header: ({ column }) => <SortHeader column={column} title="Requester Progress" />,
+    filterFn: (row, _id, filterValue) => {
+      if (!filterValue || filterValue === "all") return true
+      return row.original.requesterState.status === filterValue
+    },
     cell: ({ row }) => {
       const state = row.original.requesterState
       return (
@@ -229,33 +243,101 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
     },
   },
   {
-    accessorKey: "daysSinceLastPlayed",
-    id: "inactive",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        size="xs"
-        className="text-[11px] font-semibold uppercase tracking-wider p-0 hover:bg-transparent"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Inactive
-        <IconArrowsSort className="ml-1 size-3" />
-      </Button>
-    ),
+    id: "household",
+    accessorFn: (row) => row.householdStates.filter((h) => h.status !== "unplayed").length,
+    header: ({ column }) => <SortHeader column={column} title="Household" />,
     cell: ({ row }) => {
-      const days = row.original.daysSinceLastPlayed
+      const activeHousehold = row.original.householdStates.filter(
+        (h) => h.status !== "unplayed"
+      )
+      if (activeHousehold.length === 0) {
+        return <span className="text-muted-foreground text-xs">—</span>
+      }
+
       return (
-        <div className="flex items-center gap-1 text-muted-foreground">
-          <IconClock className="size-3.5 shrink-0" />
-          <span>{days !== null ? `${days}d ago` : "Never"}</span>
+        <div className="flex items-center -space-x-1.5 overflow-hidden">
+          {activeHousehold.map((user) => (
+            <Tooltip key={user.userId}>
+              <TooltipTrigger
+                render={
+                  <Avatar className="size-5 shrink-0 border border-background">
+                    {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.username} />}
+                    <AvatarFallback className="text-[9px] uppercase font-mono">
+                      {user.username.slice(0, 2)}
+                    </AvatarFallback>
+                  </Avatar>
+                }
+              />
+              <TooltipContent>
+                {user.username}: {user.status.replace("_", " ")} ({user.progressPercent}%)
+              </TooltipContent>
+            </Tooltip>
+          ))}
         </div>
       )
     },
   },
   {
-    accessorKey: "conflictStatus",
+    id: "size",
+    accessorFn: (row) => row.sizeBytes ?? 0,
+    header: ({ column }) => <SortHeader column={column} title="Size" />,
+    cell: ({ row }) => {
+      const item = row.original
+      const bytes = item.sizeBytes
+      let formattedSize = "—"
+      if (bytes !== undefined && bytes !== null && bytes > 0) {
+        if (bytes < 1024 * 1024 * 1024) {
+          formattedSize = `${(bytes / (1024 * 1024)).toFixed(0)} MB`
+        } else {
+          formattedSize = `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
+        }
+      }
+
+      return (
+        <div className="flex items-center gap-1.5 font-mono text-xs">
+          <span className={bytes ? "text-foreground" : "text-muted-foreground"}>
+            {formattedSize}
+          </span>
+          {item.quality && (
+            <Badge variant="secondary" className="text-[10px] px-1 py-0 font-mono">
+              {item.quality}
+            </Badge>
+          )}
+        </div>
+      )
+    },
+  },
+  {
+    id: "requested",
+    accessorFn: (row) => new Date(row.requestedAt).getTime() || 0,
+    header: ({ column }) => <SortHeader column={column} title="Requested" />,
+    cell: ({ row }) => {
+      const dateStr = row.original.requestedAt
+      const formatted = dateStr ? new Date(dateStr).toLocaleDateString() : "—"
+      return <span className="text-xs text-muted-foreground font-mono">{formatted}</span>
+    },
+  },
+  {
+    id: "inactive",
+    accessorKey: "daysSinceLastPlayed",
+    header: ({ column }) => <SortHeader column={column} title="Inactive" />,
+    sortingFn: (rowA, rowB, columnId) =>
+      sortInactiveDays(rowA.getValue(columnId), rowB.getValue(columnId)),
+    cell: ({ row }) => {
+      const days = row.original.daysSinceLastPlayed
+      return (
+        <div className="flex items-center gap-1 text-muted-foreground text-xs">
+          <IconClock className="size-3.5 shrink-0" />
+          <span>{days !== null && days !== undefined ? `${days}d ago` : "Never"}</span>
+        </div>
+      )
+    },
+  },
+  {
     id: "status",
-    header: "Retention Status",
+    accessorKey: "conflictStatus",
+    header: ({ column }) => <SortHeader column={column} title="Retention Status" />,
+    filterFn: "equalsString",
     cell: ({ row }) => {
       const status = row.original.conflictStatus
       if (status === "safe") {
@@ -280,8 +362,17 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
     },
   },
   {
+    id: "whitelisted",
+    accessorFn: (row) => (row.isWhitelisted ? "whitelisted" : "unprotected"),
+    header: () => null,
+    cell: () => null,
+    enableHiding: true,
+    filterFn: "equalsString",
+  },
+  {
     id: "actions",
     header: () => <span className="text-right block">Actions</span>,
+    enableSorting: false,
     cell: ({ row, table }) => {
       const item = row.original
       const meta = table.options.meta as TableMeta | undefined

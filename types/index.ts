@@ -7,6 +7,9 @@ export interface SeerrUser {
   id: number
   email?: string
   username: string
+  displayName?: string
+  jellyfinUsername?: string | null
+  jellyfinUserId?: string | null
   avatar?: string
 }
 
@@ -51,6 +54,7 @@ export interface JellyfinUser {
   Id: string
   Name: string
   ServerId?: string
+  PrimaryImageTag?: string
 }
 
 export interface JellyfinUserData {
@@ -58,6 +62,8 @@ export interface JellyfinUserData {
   PlayCount: number
   IsFavorite: boolean
   Played: boolean
+  PlayedPercentage?: number
+  UnplayedItemCount?: number
   LastPlayedDate?: string
   Key?: string
 }
@@ -89,6 +95,7 @@ export interface JellyfinItem {
     [key: string]: string | undefined
   }
   MediaSources?: {
+    Size?: number
     MediaStreams?: {
       Type?: string
       DisplayTitle?: string
@@ -109,6 +116,7 @@ export interface JellyfinItemsResponse {
 export interface UserPlaybackState {
   userId: string
   username: string
+  avatarUrl?: string
   isRequester: boolean
   status: WatchStatus
   progressPercent: number
