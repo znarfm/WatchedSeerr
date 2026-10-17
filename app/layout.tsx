@@ -23,6 +23,12 @@ export const metadata: Metadata = {
   ],
   icons: {
     icon: "/icon.svg",
+    apple: "/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "WatchedSeerr",
   },
   openGraph: {
     title: "WatchedSeerr | Media Retention & Lifecycle Auditor",
