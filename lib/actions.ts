@@ -147,6 +147,7 @@ export async function deleteMediaAction(input: unknown) {
     target,
     episodeFileId,
     episodeFileIds,
+    removeFromLibrary,
   } = parsed.data
   let details = ""
 
@@ -155,8 +156,16 @@ export async function deleteMediaAction(input: unknown) {
     if (radarr.isConfigured()) {
       const movie = await radarr.getMovieByTmdbId(tmdbId)
       if (movie) {
-        await radarr.deleteMovie(movie.id, true)
-        details = `Deleted from Radarr (ID: ${movie.id}, title: ${movie.title})`
+        if (removeFromLibrary) {
+          await radarr.deleteMovie(movie.id, true)
+          details = `Removed from Radarr library and disk (ID: ${movie.id}, title: ${movie.title})`
+        } else {
+          await radarr.unmonitorMovie(movie.id)
+          if (movie.movieFileId) {
+            await radarr.deleteMovieFile(movie.movieFileId)
+          }
+          details = `Unmonitored and deleted file from Radarr (ID: ${movie.id}, title: ${movie.title})`
+        }
       } else {
         details = `Movie TMDB ${tmdbId} not found in Radarr`
       }
@@ -183,9 +192,16 @@ export async function deleteMediaAction(input: unknown) {
             episodeFileIds.map((epId) => sonarr.deleteEpisodeFile(epId))
           )
           details = `Deleted ${episodeFileIds.length} episodes from Sonarr series: ${series.title}`
-        } else {
+        } else if (removeFromLibrary) {
           await sonarr.deleteSeries(series.id, true)
-          details = `Deleted entire series from Sonarr: ${series.title}`
+          details = `Removed entire series from Sonarr library: ${series.title}`
+        } else {
+          await sonarr.unmonitorSeries(series.id)
+          const files = await sonarr.getEpisodeFiles(series.id)
+          if (files.length > 0) {
+            await Promise.all(files.map((f) => sonarr.deleteEpisodeFile(f.id)))
+          }
+          details = `Unmonitored series and deleted ${files.length} episode files from Sonarr: ${series.title}`
         }
       } else {
         details = `Series TMDB ${tmdbId} not found in Sonarr`

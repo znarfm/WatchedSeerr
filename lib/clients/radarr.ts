@@ -5,6 +5,7 @@ export interface RadarrMovie {
   hasFile: boolean
   monitored: boolean
   sizeOnDisk?: number
+  movieFileId?: number
 }
 
 export class RadarrClient {
@@ -45,7 +46,12 @@ export class RadarrClient {
       throw new Error(`Radarr API error ${res.status}: ${res.statusText}`)
     }
 
-    return res.json() as Promise<T>
+    if (res.status === 204) {
+      return undefined as T
+    }
+
+    const text = await res.text()
+    return (text ? JSON.parse(text) : undefined) as T
   }
 
   async getMoviesByTmdbId(tmdbId: number): Promise<RadarrMovie[]> {
@@ -78,6 +84,13 @@ export class RadarrClient {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...movie, monitored: false }),
+    })
+    return true
+  }
+
+  async deleteMovieFile(movieFileId: number): Promise<boolean> {
+    await this.request<unknown>(`/api/v3/moviefile/${movieFileId}`, {
+      method: "DELETE",
     })
     return true
   }

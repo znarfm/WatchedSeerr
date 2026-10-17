@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -408,11 +409,15 @@ export function MediaDetailSheet({
   const [isPending, startTransition] = React.useTransition()
   const [internalCandidate, setInternalCandidate] =
     React.useState<DeleteTarget | null>(null)
+  const [removeFromLibrary, setRemoveFromLibrary] = React.useState(false)
 
   const candidate =
     deleteCandidate !== undefined ? deleteCandidate : internalCandidate
 
   const setCandidate = (c: DeleteTarget | null) => {
+    if (c) {
+      setRemoveFromLibrary(false)
+    }
     if (onDeleteCandidateChange) {
       onDeleteCandidateChange(c)
     }
@@ -478,6 +483,7 @@ export function MediaDetailSheet({
   const confirmDelete = () => {
     if (effectiveDisableDelete || !candidate) return
     const currentCandidate = candidate
+    const willRemoveFromLibrary = removeFromLibrary
     startTransition(async () => {
       try {
         const res = await deleteMediaAction({
@@ -486,6 +492,7 @@ export function MediaDetailSheet({
           mediaType: currentCandidate.item.mediaType,
           target: currentCandidate.target,
           episodeFileId: currentCandidate.episodeFileId,
+          removeFromLibrary: willRemoveFromLibrary,
         })
         if (res.success) {
           onItemDeleted(currentCandidate)
@@ -574,9 +581,21 @@ export function MediaDetailSheet({
                 ?{" "}
                 {candidate?.target === "single_episode"
                   ? "This will delete this episode file from Sonarr disk storage."
-                  : "This triggers immediate deletion in Radarr/Sonarr and purges local files."}
+                  : removeFromLibrary
+                    ? "This removes the entry from Radarr/Sonarr and deletes all local files from disk."
+                    : "This deletes all local files from disk and sets the media unmonitored in Radarr/Sonarr."}
               </DialogDescription>
             </DialogHeader>
+
+            {candidate?.target !== "single_episode" && (
+              <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
+                <Checkbox
+                  checked={removeFromLibrary}
+                  onCheckedChange={(checked) => setRemoveFromLibrary(!!checked)}
+                />
+                <span>Also remove from Radarr/Sonarr library completely</span>
+              </label>
+            )}
             <DialogFooter className="mt-4 gap-2">
               <Button
                 variant="outline"

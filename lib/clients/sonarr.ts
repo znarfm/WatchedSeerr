@@ -64,7 +64,12 @@ export class SonarrClient {
       throw new Error(`Sonarr API error ${res.status}: ${res.statusText}`)
     }
 
-    return res.json() as Promise<T>
+    if (res.status === 204) {
+      return undefined as T
+    }
+
+    const text = await res.text()
+    return (text ? JSON.parse(text) : undefined) as T
   }
 
   async getAllSeries(forceFresh = false): Promise<SonarrSeries[]> {
@@ -111,6 +116,21 @@ export class SonarrClient {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ episodeIds, monitored: false }),
+    })
+    return true
+  }
+
+  async getSeriesById(id: number): Promise<SonarrSeries | null> {
+    return this.request<SonarrSeries>(`/api/v3/series/${id}`)
+  }
+
+  async unmonitorSeries(sonarrId: number): Promise<boolean> {
+    const series = await this.getSeriesById(sonarrId)
+    if (!series) return false
+    await this.request<unknown>(`/api/v3/series/${sonarrId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...series, monitored: false }),
     })
     return true
   }

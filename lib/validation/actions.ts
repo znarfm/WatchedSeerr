@@ -16,6 +16,7 @@ export const deleteActionSchema = z.object({
   target: z.enum(["all", "watched_episodes", "single_episode"]).default("all"),
   episodeFileId: z.number().optional(),
   episodeFileIds: z.array(z.number()).optional(),
+  removeFromLibrary: z.boolean().default(false),
 })
 
 export type ToggleWhitelistInput = z.infer<typeof toggleWhitelistSchema>
