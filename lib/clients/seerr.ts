@@ -37,11 +37,33 @@ export class SeerrClient {
     return res.json() as Promise<T>
   }
 
-  async getRequests(take = 200, filter = "all"): Promise<SeerrRequest[]> {
-    const data = await this.request<SeerrRequestResponse>(
-      `/api/v1/request?take=${take}&filter=${filter}&sort=added`
+  async getRequests(
+    take = 200,
+    skip = 0,
+    filter = "all"
+  ): Promise<SeerrRequestResponse> {
+    return this.request<SeerrRequestResponse>(
+      `/api/v1/request?take=${take}&skip=${skip}&filter=${filter}&sort=added`
     )
-    return data.results || []
+  }
+
+  async getAllRequests(filter = "all"): Promise<SeerrRequest[]> {
+    const allResults: SeerrRequest[] = []
+    let skip = 0
+    const take = 100
+
+    while (true) {
+      const data = await this.getRequests(take, skip, filter)
+      const results = data.results || []
+      allResults.push(...results)
+
+      if (results.length < take || allResults.length >= (data.pageInfo?.results || 0)) {
+        break
+      }
+      skip += take
+    }
+
+    return allResults
   }
 
   async getUsers(take = 100): Promise<SeerrUser[]> {

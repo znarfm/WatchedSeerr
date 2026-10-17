@@ -42,23 +42,51 @@ export class JellyfinClient {
   }
 
   /**
-   * Fetches the entire library in one single call (Movie & Series) with ProviderIds.
+   * Fetches the entire library in calls (Movie & Series) with ProviderIds.
    */
   async getAllLibraryItems(): Promise<JellyfinItem[]> {
-    const res = await this.request<JellyfinItemsResponse>(
-      "/Items?Recursive=true&IncludeItemTypes=Movie,Series&Fields=ProviderIds,ProductionYear,RunTimeTicks,Path,Overview,Genres,MediaStreams,MediaSources,Size,ImageTags&EnableUserData=false&Limit=5000"
-    )
-    return res.Items || []
+    const allItems: JellyfinItem[] = []
+    let startIndex = 0
+    const limit = 2000
+
+    while (true) {
+      const res = await this.request<JellyfinItemsResponse>(
+        `/Items?Recursive=true&IncludeItemTypes=Movie,Series&CollapseBoxSetItems=false&Fields=ProviderIds,ProductionYear,RunTimeTicks,Path,Overview,Genres,MediaStreams,MediaSources,Size,ImageTags&EnableUserData=false&StartIndex=${startIndex}&Limit=${limit}`
+      )
+      const items = res.Items || []
+      allItems.push(...items)
+
+      if (items.length < limit || (res.TotalRecordCount && allItems.length >= res.TotalRecordCount)) {
+        break
+      }
+      startIndex += limit
+    }
+
+    return allItems
   }
 
   /**
-   * Fetches all user items with watch progress for a user in one single call.
+   * Fetches all user items with watch progress for a user in calls.
    */
   async getAllUserItems(userId: string): Promise<JellyfinItem[]> {
-    const res = await this.request<JellyfinItemsResponse>(
-      `/Users/${userId}/Items?Recursive=true&IncludeItemTypes=Movie,Series&Fields=UserData&EnableImages=false&EnableTotalRecordCount=false&Limit=5000`
-    )
-    return res.Items || []
+    const allItems: JellyfinItem[] = []
+    let startIndex = 0
+    const limit = 2000
+
+    while (true) {
+      const res = await this.request<JellyfinItemsResponse>(
+        `/Users/${userId}/Items?Recursive=true&IncludeItemTypes=Movie,Series&CollapseBoxSetItems=false&Fields=UserData&EnableImages=false&StartIndex=${startIndex}&Limit=${limit}`
+      )
+      const items = res.Items || []
+      allItems.push(...items)
+
+      if (items.length < limit || (res.TotalRecordCount && allItems.length >= res.TotalRecordCount)) {
+        break
+      }
+      startIndex += limit
+    }
+
+    return allItems
   }
 
   async getEpisodes(

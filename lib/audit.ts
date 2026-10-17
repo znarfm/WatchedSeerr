@@ -253,9 +253,17 @@ export async function auditMedia(
   const jellyfin = options.jellyfinClient || new JellyfinClient()
 
   // 1. Concurrent bulk fetch from Seerr & Jellyfin
+  const fetchRequests = async (): Promise<SeerrRequest[]> => {
+    if (typeof seerr.getAllRequests === "function") {
+      return seerr.getAllRequests("all")
+    }
+    const res = await (seerr as any).getRequests(200, "all")
+    return Array.isArray(res) ? res : res?.results || []
+  }
+
   const [requests, jellyfinUsers, allLibraryItems, seerrUsers, allEpisodes] =
     await Promise.all([
-      seerr.getRequests(200, "all"),
+      fetchRequests(),
       jellyfin.getUsers(),
       jellyfin.getAllLibraryItems().catch(() => [] as JellyfinItem[]),
       typeof (seerr as any).getUsers === "function"
