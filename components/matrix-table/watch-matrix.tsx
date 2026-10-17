@@ -47,8 +47,9 @@ import { cn } from "cn"
 import type { AuditMediaItem, ConflictStatus, UserPlaybackState } from "@/types"
 
 import { isSearchShortcut } from "@/components/audit-table/data-table"
+import { useTableShortcuts } from "@/lib/hooks/use-table-shortcuts"
 
-export { isSearchShortcut }
+export { isSearchShortcut, useTableShortcuts }
 
 export interface MatrixUserColumn {
   key: string // userId or lowercase username
@@ -181,29 +182,7 @@ export function WatchMatrix({ initialData }: WatchMatrixProps) {
     })
   }, [router])
 
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        isSearchShortcut({
-          key: e.key,
-          ctrlKey: e.ctrlKey,
-          metaKey: e.metaKey,
-          altKey: e.altKey,
-          targetTagName: (e.target as HTMLElement)?.tagName,
-        })
-      ) {
-        e.preventDefault()
-        searchInputRef.current?.focus()
-        searchInputRef.current?.select()
-      } else if (e.altKey && e.key.toLowerCase() === "r") {
-        e.preventDefault()
-        handleRefresh()
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [handleRefresh])
+  useTableShortcuts(searchInputRef, handleRefresh)
 
   // Reconcile user columns from current data
   const userColumns = React.useMemo(() => deriveMatrixUsers(data), [data])

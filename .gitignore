@@ -39,3 +39,6 @@ pnpm-debug.log*
 next-env.d.ts
 
 !.env.example
+
+# specs
+/specs/

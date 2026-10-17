@@ -26,7 +26,7 @@ import { toast } from "@/components/ui/toast"
 import { toggleWhitelistAction, deleteMediaAction } from "@/lib/actions"
 import type { AuditMediaItem, MediaExternalLinks } from "@/types"
 import { IconExternalLink } from "@tabler/icons-react"
-import { cn } from "cn"
+import { cn, formatMediaSize } from "@/lib/utils"
 
 export interface DeleteTarget {
   item: AuditMediaItem
@@ -56,14 +56,6 @@ export function resolveExternalLinks(item: AuditMediaItem): MediaExternalLinks {
     ...fallback,
     ...(item.externalLinks || {}),
   }
-}
-
-function formatMediaSize(bytes?: number): string {
-  if (bytes === undefined || bytes === null || bytes <= 0) return ""
-  if (bytes < 1024 * 1024 * 1024) {
-    return `${(bytes / (1024 * 1024)).toFixed(0)} MB`
-  }
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
 }
 
 export interface MediaDetailSheetBodyProps {

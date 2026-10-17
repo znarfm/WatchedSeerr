@@ -1,5 +1,6 @@
 import type { Column, ColumnDef, RowData } from "@tanstack/react-table"
 import type { AuditMediaItem } from "@/types"
+import { formatMediaSize } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -296,19 +297,11 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
     header: ({ column }) => <SortHeader column={column} title="Size" />,
     cell: ({ row }) => {
       const item = row.original
-      const bytes = item.sizeBytes
-      let formattedSize = "—"
-      if (bytes !== undefined && bytes !== null && bytes > 0) {
-        if (bytes < 1024 * 1024 * 1024) {
-          formattedSize = `${(bytes / (1024 * 1024)).toFixed(0)} MB`
-        } else {
-          formattedSize = `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
-        }
-      }
+      const formattedSize = formatMediaSize(item.sizeBytes) || "—"
 
       return (
         <div className="flex items-center gap-1.5 font-mono text-xs">
-          <span className={bytes ? "text-foreground" : "text-muted-foreground"}>
+          <span className={item.sizeBytes ? "text-foreground" : "text-muted-foreground"}>
             {formattedSize}
           </span>
           {item.quality && (

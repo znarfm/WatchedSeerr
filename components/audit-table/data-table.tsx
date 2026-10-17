@@ -44,6 +44,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useTableShortcuts } from "@/lib/hooks/use-table-shortcuts"
 import { toast } from "@/components/ui/toast"
 import {
   MediaDetailSheet,
@@ -177,29 +178,7 @@ export function DataTable({ initialData }: DataTableProps) {
     })
   }, [router])
 
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        isSearchShortcut({
-          key: e.key,
-          ctrlKey: e.ctrlKey,
-          metaKey: e.metaKey,
-          altKey: e.altKey,
-          targetTagName: (e.target as HTMLElement)?.tagName,
-        })
-      ) {
-        e.preventDefault()
-        searchInputRef.current?.focus()
-        searchInputRef.current?.select()
-      } else if (e.altKey && e.key.toLowerCase() === "r") {
-        e.preventDefault()
-        handleRefresh()
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [handleRefresh])
+  useTableShortcuts(searchInputRef, handleRefresh)
 
   const metricCounts = React.useMemo(() => computeMetricCounts(data), [data])
 
