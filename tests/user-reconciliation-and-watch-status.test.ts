@@ -22,7 +22,7 @@ describe("User Reconciliation and Watch Status Seam", () => {
         ok: true,
         status: 200,
         json: async () => ({
-          results: [{ id: 1, displayName: "Meinard", jellyfinUserId: "u-1" }],
+          results: [{ id: 1, displayName: "Alex", jellyfinUserId: "u-1" }],
         }),
       } as unknown as Response
     }) as typeof globalThis.fetch
@@ -31,7 +31,7 @@ describe("User Reconciliation and Watch Status Seam", () => {
       const users = await client.getUsers(50)
       assert.equal(capturedUrl, "http://seerr.test/api/v1/user?take=50")
       assert.equal(users.length, 1)
-      assert.equal(users[0].displayName, "Meinard")
+      assert.equal(users[0].displayName, "Alex")
     } finally {
       globalThis.fetch = originalFetch
     }
@@ -71,11 +71,11 @@ describe("User Reconciliation and Watch Status Seam", () => {
     const mockSeerrUsers: SeerrUser[] = [
       {
         id: 1,
-        displayName: "Meinard",
-        username: "meinard",
-        jellyfinUsername: "nard",
-        jellyfinUserId: "u-nard-1234",
-        avatar: "/avatar/meinard.jpg",
+        displayName: "Alex",
+        username: "alex",
+        jellyfinUsername: "alexj",
+        jellyfinUserId: "u-alex-1234",
+        avatar: "/avatar/alex.jpg",
       },
       {
         id: 2,
@@ -106,9 +106,9 @@ describe("User Reconciliation and Watch Status Seam", () => {
     ]
 
     const mockJellyfinUsers: JellyfinUser[] = [
-      { Id: "unard1234", Name: "nard", PrimaryImageTag: "tag-nard" },
+      { Id: "ualex1234", Name: "alexj", PrimaryImageTag: "tag-alex" },
       { Id: "ufam5678", Name: "fam" }, // No PrimaryImageTag
-      { Id: "ujenna", Name: "jenna" }, // No Seerr user, no PrimaryImageTag
+      { Id: "uguest", Name: "guest" }, // No Seerr user, no PrimaryImageTag
     ]
 
     const mockLibraryItems: JellyfinItem[] = [
@@ -144,7 +144,7 @@ describe("User Reconciliation and Watch Status Seam", () => {
       getUsers: async () => mockJellyfinUsers,
       getAllLibraryItems: async () => mockLibraryItems,
       getAllUserItems: async (userId: string) =>
-        userId === "unard1234" ? mockUserItems : [],
+        userId === "ualex1234" ? mockUserItems : [],
     } as unknown as JellyfinClient
 
     const report = await auditMedia({
@@ -156,17 +156,17 @@ describe("User Reconciliation and Watch Status Seam", () => {
     const item = report.items[0]
 
     // Canonical display name on requester and requesterState
-    assert.equal(item.requester.username, "Meinard")
-    assert.equal(item.requesterState.username, "Meinard")
-    assert.equal(item.requesterState.userId, "unard1234")
+    assert.equal(item.requester.username, "Alex")
+    assert.equal(item.requesterState.username, "Alex")
+    assert.equal(item.requesterState.userId, "ualex1234")
     assert.equal(item.requesterState.status, "completed")
     assert.equal(
       item.requesterState.avatarUrl,
-      "/api/proxy/avatar?userId=unard1234&tag=tag-nard"
+      "/api/proxy/avatar?userId=ualex1234&tag=tag-alex"
     )
     assert.equal(
       item.requester.requesterAvatarUrl,
-      "/api/proxy/avatar?userId=unard1234&tag=tag-nard"
+      "/api/proxy/avatar?userId=ualex1234&tag=tag-alex"
     )
 
     // Household states should have canonical display names and avatar presence
@@ -179,13 +179,13 @@ describe("User Reconciliation and Watch Status Seam", () => {
       "fam has no PrimaryImageTag so avatarUrl is undefined"
     )
 
-    const jennaState = item.householdStates.find((h) => h.userId === "ujenna")
-    assert.ok(jennaState, "jenna user exists in householdStates")
-    assert.equal(jennaState.username, "jenna")
+    const guestState = item.householdStates.find((h) => h.userId === "uguest")
+    assert.ok(guestState, "guest user exists in householdStates")
+    assert.equal(guestState.username, "guest")
     assert.equal(
-      jennaState.avatarUrl,
+      guestState.avatarUrl,
       undefined,
-      "jenna has no PrimaryImageTag so avatarUrl is undefined"
+      "guest has no PrimaryImageTag so avatarUrl is undefined"
     )
   })
 
