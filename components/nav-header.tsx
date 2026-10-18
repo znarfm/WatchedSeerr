@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { IconLayoutGrid } from "@tabler/icons-react"
+import { IconLayoutGrid, IconListCheck } from "@tabler/icons-react"
 import { Logo } from "@/components/logo"
 import { cn } from "@/lib/utils"
 
@@ -61,12 +61,13 @@ export function NavHeader() {
           <Link
             href="/"
             className={cn(
-              "px-2.5 py-1 text-xs font-medium transition-colors",
+              "flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium transition-colors",
               isQueue
                 ? "border border-primary bg-primary/10 text-primary"
                 : "border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
+            <IconListCheck className="size-3.5" />
             Audit Queue
           </Link>
           <Link

@@ -29,6 +29,7 @@ import {
   IconChevronRight,
   IconLoader2,
   IconSparkles,
+  IconDotsVertical,
 } from "@tabler/icons-react"
 
 declare module "@tanstack/react-table" {
@@ -466,7 +467,11 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
   {
     id: "actions",
     meta: { className: "w-12 text-right" },
-    header: () => <span className="block text-right">Actions</span>,
+    header: () => (
+      <span className="flex items-center justify-end pr-1 text-muted-foreground" title="Actions">
+        <IconDotsVertical className="size-3.5" />
+      </span>
+    ),
     enableSorting: false,
     cell: ({ row, table }) => {
       const item = row.original

@@ -170,10 +170,11 @@ export function MediaDetailSheetBody({
               href={links.jellyfin}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
+              className="inline-flex items-center gap-1.5 border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
             >
+              <img src="/jellyfin.svg" alt="" className="size-3.5 shrink-0" />
               <span>Jellyfin</span>
-              <IconExternalLink className="size-3" />
+              <IconExternalLink className="size-3 opacity-60" />
             </a>
           )}
           {links.seerr && (
@@ -181,10 +182,11 @@ export function MediaDetailSheetBody({
               href={links.seerr}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
+              className="inline-flex items-center gap-1.5 border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
             >
+              <img src="/seerr.svg" alt="" className="size-3.5 shrink-0" />
               <span>Seerr</span>
-              <IconExternalLink className="size-3" />
+              <IconExternalLink className="size-3 opacity-60" />
             </a>
           )}
           {selectedItem.mediaType === "movie" && links.arr && (
@@ -192,10 +194,11 @@ export function MediaDetailSheetBody({
               href={links.arr}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
+              className="inline-flex items-center gap-1.5 border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
             >
+              <img src="/radarr.svg" alt="" className="size-3.5 shrink-0" />
               <span>Radarr</span>
-              <IconExternalLink className="size-3" />
+              <IconExternalLink className="size-3 opacity-60" />
             </a>
           )}
           {selectedItem.mediaType === "tv" && links.arr && (
@@ -203,10 +206,11 @@ export function MediaDetailSheetBody({
               href={links.arr}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
+              className="inline-flex items-center gap-1.5 border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
             >
+              <img src="/sonarr.svg" alt="" className="size-3.5 shrink-0" />
               <span>Sonarr</span>
-              <IconExternalLink className="size-3" />
+              <IconExternalLink className="size-3 opacity-60" />
             </a>
           )}
           {links.imdb && (
@@ -214,10 +218,11 @@ export function MediaDetailSheetBody({
               href={links.imdb}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
+              className="inline-flex items-center gap-1.5 border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
             >
+              <img src="/imdb.svg" alt="" className="size-3.5 shrink-0" />
               <span>IMDb</span>
-              <IconExternalLink className="size-3" />
+              <IconExternalLink className="size-3 opacity-60" />
             </a>
           )}
           {links.letterboxd && (
@@ -225,10 +230,11 @@ export function MediaDetailSheetBody({
               href={links.letterboxd}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
+              className="inline-flex items-center gap-1.5 border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
             >
+              <img src="/letterboxd.svg" alt="" className="size-3.5 shrink-0" />
               <span>Letterboxd</span>
-              <IconExternalLink className="size-3" />
+              <IconExternalLink className="size-3 opacity-60" />
             </a>
           )}
         </div>

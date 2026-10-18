@@ -44,6 +44,8 @@ import {
   IconRefresh,
   IconMovie,
   IconDeviceTv,
+  IconUser,
+  IconAlertTriangle,
 } from "@tabler/icons-react"
 import { refreshAuditAction } from "@/lib/actions"
 import { isDeleteDisabled } from "@/lib/utils"
@@ -391,10 +393,12 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
               <TabsTrigger value="all" className="text-[11px] uppercase">
                 All
               </TabsTrigger>
-              <TabsTrigger value="movie" className="text-[11px] uppercase">
+              <TabsTrigger value="movie" className="gap-1 text-[11px] uppercase">
+                <IconMovie className="size-3.5" />
                 Movie
               </TabsTrigger>
-              <TabsTrigger value="tv" className="text-[11px] uppercase">
+              <TabsTrigger value="tv" className="gap-1 text-[11px] uppercase">
+                <IconDeviceTv className="size-3.5" />
                 TV
               </TabsTrigger>
             </TabsList>
@@ -412,13 +416,16 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
               }}
             >
               <SelectTrigger className="h-8 min-w-36 bg-background text-xs">
-                <SelectValue placeholder="All Requesters">
-                  {(val: string | null) =>
-                    val === "all" || !val ? "All Requesters" : val
-                  }
-                </SelectValue>
+                <div className="flex items-center gap-1.5 truncate">
+                  <IconUser className="size-3.5 shrink-0 text-muted-foreground" />
+                  <SelectValue placeholder="All Requesters">
+                    {(val: string | null) =>
+                      val === "all" || !val ? "All Requesters" : val
+                    }
+                  </SelectValue>
+                </div>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent alignItemWithTrigger={false}>
                 <SelectItem value="all">All Requesters</SelectItem>
                 {uniqueRequesters.map((u) => (
                   <SelectItem key={u} value={u}>
@@ -439,21 +446,24 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
               }}
             >
               <SelectTrigger className="h-8 min-w-32 bg-background text-xs">
-                <SelectValue placeholder="All Statuses">
-                  {(val: string | null) =>
-                    val === "all" || !val
-                      ? "All Statuses"
-                      : val === "safe"
-                        ? "Safe"
-                        : val === "new"
-                          ? "New"
-                          : val === "conflict"
-                            ? "Conflict"
-                            : "Ghost"
-                  }
-                </SelectValue>
+                <div className="flex items-center gap-1.5 truncate">
+                  <IconAlertTriangle className="size-3.5 shrink-0 text-muted-foreground" />
+                  <SelectValue placeholder="All Statuses">
+                    {(val: string | null) =>
+                      val === "all" || !val
+                        ? "All Statuses"
+                        : val === "safe"
+                          ? "Safe"
+                          : val === "new"
+                            ? "New"
+                            : val === "conflict"
+                              ? "Conflict"
+                              : "Ghost"
+                    }
+                  </SelectValue>
+                </div>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent alignItemWithTrigger={false}>
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="safe">Safe</SelectItem>
                 <SelectItem value="new">New</SelectItem>

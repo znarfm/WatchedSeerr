@@ -64,6 +64,17 @@ import {
   IconChevronRight,
   IconSearch,
   IconRefresh,
+  IconMovie,
+  IconDeviceTv,
+  IconUser,
+  IconPlayerPlay,
+  IconBookmark,
+  IconBookmarkOff,
+  IconCheck,
+  IconSparkles,
+  IconAlertTriangle,
+  IconGhost,
+  IconDatabase,
 } from "@tabler/icons-react"
 
 export interface MetricCounts {
@@ -406,10 +417,11 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
                 : "border-border bg-muted/10 hover:bg-muted/20"
             )}
           >
-            <CardHeader className="px-3 pt-3 pb-1">
+            <CardHeader className="flex flex-row items-center justify-between px-3 pt-3 pb-1">
               <CardTitle className="text-[11px] font-normal tracking-wider text-muted-foreground uppercase">
                 Total Audited
               </CardTitle>
+              <IconDatabase className="size-3.5 text-muted-foreground" />
             </CardHeader>
             <CardContent className="px-3 pb-3">
               <span className="font-mono text-2xl font-bold">
@@ -433,10 +445,11 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
                 : "border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10"
             )}
           >
-            <CardHeader className="px-3 pt-3 pb-1">
+            <CardHeader className="flex flex-row items-center justify-between px-3 pt-3 pb-1">
               <CardTitle className="text-[11px] font-normal tracking-wider text-emerald-400 uppercase">
                 Safe to Purge
               </CardTitle>
+              <IconCheck className="size-3.5 text-emerald-400" />
             </CardHeader>
             <CardContent className="px-3 pb-3">
               <span className="font-mono text-2xl font-bold text-emerald-400">
@@ -460,10 +473,11 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
                 : "border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10"
             )}
           >
-            <CardHeader className="px-3 pt-3 pb-1">
+            <CardHeader className="flex flex-row items-center justify-between px-3 pt-3 pb-1">
               <CardTitle className="text-[11px] font-normal tracking-wider text-sky-400 uppercase">
                 New / Unwatched
               </CardTitle>
+              <IconSparkles className="size-3.5 text-sky-400" />
             </CardHeader>
             <CardContent className="px-3 pb-3">
               <span className="font-mono text-2xl font-bold text-sky-500">
@@ -487,10 +501,11 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
                 : "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10"
             )}
           >
-            <CardHeader className="px-3 pt-3 pb-1">
+            <CardHeader className="flex flex-row items-center justify-between px-3 pt-3 pb-1">
               <CardTitle className="text-[11px] font-normal tracking-wider text-amber-400 uppercase">
                 Active Conflicts
               </CardTitle>
+              <IconAlertTriangle className="size-3.5 text-amber-400" />
             </CardHeader>
             <CardContent className="px-3 pb-3">
               <span className="font-mono text-2xl font-bold text-amber-400">
@@ -514,10 +529,11 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
                 : "border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10"
             )}
           >
-            <CardHeader className="px-3 pt-3 pb-1">
+            <CardHeader className="flex flex-row items-center justify-between px-3 pt-3 pb-1">
               <CardTitle className="text-[11px] font-normal tracking-wider text-rose-400 uppercase">
                 Ghost Requests
               </CardTitle>
+              <IconGhost className="size-3.5 text-rose-400" />
             </CardHeader>
             <CardContent className="px-3 pb-3">
               <span className="font-mono text-2xl font-bold text-rose-400">
@@ -573,10 +589,12 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
               <TabsTrigger value="all" className="text-[11px] uppercase">
                 All
               </TabsTrigger>
-              <TabsTrigger value="movie" className="text-[11px] uppercase">
+              <TabsTrigger value="movie" className="gap-1 text-[11px] uppercase">
+                <IconMovie className="size-3.5" />
                 Movie
               </TabsTrigger>
-              <TabsTrigger value="tv" className="text-[11px] uppercase">
+              <TabsTrigger value="tv" className="gap-1 text-[11px] uppercase">
+                <IconDeviceTv className="size-3.5" />
                 TV
               </TabsTrigger>
             </TabsList>
@@ -595,11 +613,14 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
                 size="sm"
                 className="h-8 min-w-36 bg-background text-xs"
               >
-                <SelectValue placeholder="All Requesters">
-                  {(val) => (!val || val === "all" ? "All Requesters" : val)}
-                </SelectValue>
+                <div className="flex items-center gap-1.5 truncate">
+                  <IconUser className="size-3.5 shrink-0 text-muted-foreground" />
+                  <SelectValue placeholder="All Requesters">
+                    {(val) => (!val || val === "all" ? "All Requesters" : val)}
+                  </SelectValue>
+                </div>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent alignItemWithTrigger={false}>
                 <SelectItem value="all">All Requesters</SelectItem>
                 {uniqueRequesters.map((user) => (
                   <SelectItem key={user} value={user}>
@@ -621,19 +642,22 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
                 size="sm"
                 className="h-8 min-w-36 bg-background text-xs"
               >
-                <SelectValue placeholder="All Watch States">
-                  {(val) =>
-                    val === "completed"
-                      ? "Completed"
-                      : val === "in_progress"
-                        ? "In Progress"
-                        : val === "unplayed"
-                          ? "Unplayed"
-                          : "All Watch States"
-                  }
-                </SelectValue>
+                <div className="flex items-center gap-1.5 truncate">
+                  <IconPlayerPlay className="size-3.5 shrink-0 text-muted-foreground" />
+                  <SelectValue placeholder="All Watch States">
+                    {(val) =>
+                      val === "completed"
+                        ? "Completed"
+                        : val === "in_progress"
+                          ? "In Progress"
+                          : val === "unplayed"
+                            ? "Unplayed"
+                            : "All Watch States"
+                    }
+                  </SelectValue>
+                </div>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent alignItemWithTrigger={false}>
                 <SelectItem value="all">All Watch States</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
                 <SelectItem value="in_progress">In Progress</SelectItem>
@@ -653,17 +677,20 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
                 size="sm"
                 className="h-8 min-w-32 bg-background text-xs"
               >
-                <SelectValue placeholder="All Items">
-                  {(val) =>
-                    val === "whitelisted"
-                      ? "Whitelisted"
-                      : val === "unprotected"
-                        ? "Unprotected"
-                        : "All Items"
-                  }
-                </SelectValue>
+                <div className="flex items-center gap-1.5 truncate">
+                  <IconBookmark className="size-3.5 shrink-0 text-muted-foreground" />
+                  <SelectValue placeholder="All Items">
+                    {(val) =>
+                      val === "whitelisted"
+                        ? "Whitelisted"
+                        : val === "unprotected"
+                          ? "Unprotected"
+                          : "All Items"
+                    }
+                  </SelectValue>
+                </div>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent alignItemWithTrigger={false}>
                 <SelectItem value="all">All Items</SelectItem>
                 <SelectItem value="whitelisted">Whitelisted</SelectItem>
                 <SelectItem value="unprotected">Unprotected</SelectItem>
@@ -697,7 +724,7 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
                   key={String(want)}
                   variant="outline"
                   size="xs"
-                  className="h-8 text-xs"
+                  className="h-8 gap-1 text-xs"
                   disabled={isPending}
                   onClick={() => {
                     table
@@ -710,6 +737,11 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
                     table.resetRowSelection()
                   }}
                 >
+                  {want ? (
+                    <IconBookmark className="size-3.5 text-amber-500" />
+                  ) : (
+                    <IconBookmarkOff className="size-3.5" />
+                  )}
                   {want ? "Whitelist" : "Unwhitelist"}
                 </Button>
               ))}
