@@ -364,7 +364,7 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
               variant="secondary"
               title={item.qualityFull}
               className={cn(
-                "max-w-[100px] sm:max-w-[120px] truncate px-1 py-0 font-mono text-[10px]",
+                "max-w-25 truncate px-1 py-0 font-mono text-[10px] sm:max-w-30",
                 codecClass(item.qualityFull)
               )}
             >
@@ -468,7 +468,10 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
     id: "actions",
     meta: { className: "w-12 text-right" },
     header: () => (
-      <span className="flex items-center justify-end pr-1 text-muted-foreground" title="Actions">
+      <span
+        className="flex items-center justify-end pr-1 text-muted-foreground"
+        title="Actions"
+      >
         <IconDotsVertical className="size-3.5" />
       </span>
     ),

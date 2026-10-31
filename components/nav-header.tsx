@@ -57,7 +57,10 @@ export function NavHeader() {
           </div>
         </Link>
 
-        <nav aria-label="Main Navigation" className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <nav
+          aria-label="Main Navigation"
+          className="flex shrink-0 items-center gap-1.5 sm:gap-2"
+        >
           <Link
             href="/"
             className={cn(

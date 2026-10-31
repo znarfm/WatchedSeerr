@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     "Arr Stack",
     "Radarr",
     "Sonarr",
-    "Media server"
+    "Media server",
   ],
   icons: {
     icon: "/icon.svg",

@@ -46,7 +46,16 @@ import {
   IconDeviceTv,
   IconUser,
   IconAlertTriangle,
+  IconFilter,
 } from "@tabler/icons-react"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer"
 import { refreshAuditAction } from "@/lib/actions"
 import { isDeleteDisabled } from "@/lib/utils"
 import { cn } from "cn"
@@ -343,183 +352,393 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
     setPageIndex(0)
   }
 
+  const activeFilterCount =
+    (mediaTypeFilter !== "all" ? 1 : 0) +
+    (requesterFilter !== "all" ? 1 : 0) +
+    (statusFilter !== "all" ? 1 : 0)
+
   return (
     <div className="space-y-4">
       {/* Toolbar Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-muted/20 p-3">
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
-          {/* Title search */}
-          <div className="relative w-full sm:w-64">
-            <Input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Search by title..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
+      <div className="border border-border bg-muted/20 p-2.5 sm:p-3">
+        {/* Mobile Toolbar */}
+        <div className="flex flex-col gap-2 sm:hidden">
+          {/* Row 1: Search + Refresh */}
+          <div className="flex items-center gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search by title..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPageIndex(0)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setSearch("")
+                    setPageIndex(0)
+                    e.currentTarget.blur()
+                  }
+                }}
+                className="h-8 bg-background pr-8 pl-8 text-xs"
+              />
+              <IconSearch className="pointer-events-none absolute top-2 left-2.5 size-4 text-muted-foreground" />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute top-1/2 right-2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <Kbd className="h-4 px-1 text-[10px]">Esc</Kbd>
+                </button>
+              )}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 shrink-0 px-2.5 text-xs"
+              disabled={isPending || isRefreshing}
+              onClick={handleRefresh}
+              aria-label="Refresh audit data"
+            >
+              <IconRefresh
+                className={cn("size-3.5", isRefreshing && "animate-spin")}
+              />
+              <span className="ml-1 text-xs">Refresh</span>
+            </Button>
+          </div>
+
+          {/* Row 2: Media Type Tabs + Filters Sheet Button */}
+          <div className="flex items-center justify-between gap-2">
+            <Tabs
+              value={mediaTypeFilter}
+              onValueChange={(val) => {
+                setMediaTypeFilter(val as "all" | "movie" | "tv")
                 setPageIndex(0)
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  setSearch("")
+            >
+              <TabsList>
+                <TabsTrigger value="all" className="text-[11px] uppercase">
+                  All
+                </TabsTrigger>
+                <TabsTrigger
+                  value="movie"
+                  className="gap-1 text-[11px] uppercase"
+                >
+                  <IconMovie className="size-3.5" />
+                  Movie
+                </TabsTrigger>
+                <TabsTrigger value="tv" className="gap-1 text-[11px] uppercase">
+                  <IconDeviceTv className="size-3.5" />
+                  TV
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className="flex items-center gap-1.5">
+              <Drawer showSwipeHandle>
+                <DrawerTrigger
+                  render={
+                    <Button
+                      variant={isFiltered ? "default" : "outline"}
+                      size="sm"
+                      className="h-8 gap-1.5 px-2.5 text-xs"
+                    >
+                      <IconFilter className="size-3.5" />
+                      <span>Filters</span>
+                      {activeFilterCount > 0 && (
+                        <span className="flex size-4 items-center justify-center rounded-full bg-background text-[10px] font-bold text-foreground">
+                          {activeFilterCount}
+                        </span>
+                      )}
+                    </Button>
+                  }
+                />
+                <DrawerContent className="p-5 pt-2">
+                  <DrawerHeader className="mb-4 text-left">
+                    <DrawerTitle className="text-sm font-semibold">
+                      Filter Watch Matrix
+                    </DrawerTitle>
+                    <DrawerDescription className="text-xs text-muted-foreground">
+                      Narrow down media by requester or retention status.
+                    </DrawerDescription>
+                  </DrawerHeader>
+
+                  <div className="space-y-3.5">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Requester
+                      </label>
+                      <Select
+                        value={requesterFilter}
+                        onValueChange={(val) => {
+                          if (val) {
+                            setRequesterFilter(val)
+                            setPageIndex(0)
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="h-9 w-full bg-background text-xs">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <IconUser className="size-3.5 shrink-0 text-muted-foreground" />
+                            <SelectValue placeholder="All Requesters">
+                              {(val: string | null) =>
+                                val === "all" || !val ? "All Requesters" : val
+                              }
+                            </SelectValue>
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent alignItemWithTrigger={false}>
+                          <SelectItem value="all">All Requesters</SelectItem>
+                          {uniqueRequesters.map((u) => (
+                            <SelectItem key={u} value={u}>
+                              {u}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Retention Status
+                      </label>
+                      <Select
+                        value={statusFilter}
+                        onValueChange={(val) => {
+                          if (val) {
+                            setStatusFilter(val as "all" | ConflictStatus)
+                            setPageIndex(0)
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="h-9 w-full bg-background text-xs">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <IconAlertTriangle className="size-3.5 shrink-0 text-muted-foreground" />
+                            <SelectValue placeholder="All Statuses">
+                              {(val: string | null) =>
+                                val === "all" || !val
+                                  ? "All Statuses"
+                                  : val === "safe"
+                                    ? "Safe"
+                                    : val === "new"
+                                      ? "New"
+                                      : val === "conflict"
+                                        ? "Conflict"
+                                        : "Ghost"
+                              }
+                            </SelectValue>
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent alignItemWithTrigger={false}>
+                          <SelectItem value="all">All Statuses</SelectItem>
+                          <SelectItem value="safe">Safe</SelectItem>
+                          <SelectItem value="new">New</SelectItem>
+                          <SelectItem value="conflict">Conflict</SelectItem>
+                          <SelectItem value="ghost">Ghost</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </DrawerContent>
+              </Drawer>
+
+              {isFiltered && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleReset}
+                  className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Reset
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Toolbar */}
+        <div className="hidden sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Title search */}
+            <div className="relative w-64">
+              <Input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search by title..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value)
                   setPageIndex(0)
-                  e.currentTarget.blur()
-                }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setSearch("")
+                    setPageIndex(0)
+                    e.currentTarget.blur()
+                  }
+                }}
+                className="h-8 bg-background pr-16 pl-8 text-xs"
+              />
+              <IconSearch className="pointer-events-none absolute top-2 left-2.5 size-4 text-muted-foreground" />
+              <div className="pointer-events-none absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-0.5">
+                {search ? (
+                  <Kbd className="h-4 px-1 text-[10px]">Esc</Kbd>
+                ) : (
+                  <KbdGroup>
+                    <Kbd className="h-4 px-1 text-[10px]">Ctrl</Kbd>
+                    <Kbd className="h-4 px-1 text-[10px]">K</Kbd>
+                  </KbdGroup>
+                )}
+              </div>
+            </div>
+
+            {/* Media Type Tabs */}
+            <Tabs
+              value={mediaTypeFilter}
+              onValueChange={(val) => {
+                setMediaTypeFilter(val as "all" | "movie" | "tv")
+                setPageIndex(0)
               }}
-              className="h-8 bg-background pr-16 pl-8 text-xs"
-            />
-            <IconSearch className="pointer-events-none absolute top-2 left-2.5 size-4 text-muted-foreground" />
-            <div className="pointer-events-none absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-0.5">
-              {search ? (
-                <Kbd className="h-4 px-1 text-[10px]">Esc</Kbd>
-              ) : (
-                <KbdGroup>
-                  <Kbd className="h-4 px-1 text-[10px]">Ctrl</Kbd>
-                  <Kbd className="h-4 px-1 text-[10px]">K</Kbd>
-                </KbdGroup>
+            >
+              <TabsList>
+                <TabsTrigger value="all" className="text-[11px] uppercase">
+                  All
+                </TabsTrigger>
+                <TabsTrigger
+                  value="movie"
+                  className="gap-1 text-[11px] uppercase"
+                >
+                  <IconMovie className="size-3.5" />
+                  Movie
+                </TabsTrigger>
+                <TabsTrigger value="tv" className="gap-1 text-[11px] uppercase">
+                  <IconDeviceTv className="size-3.5" />
+                  TV
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Requester Filter */}
+              <Select
+                value={requesterFilter}
+                onValueChange={(val) => {
+                  if (val) {
+                    setRequesterFilter(val)
+                    setPageIndex(0)
+                  }
+                }}
+              >
+                <SelectTrigger className="h-8 min-w-36 bg-background text-xs">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <IconUser className="size-3.5 shrink-0 text-muted-foreground" />
+                    <SelectValue placeholder="All Requesters">
+                      {(val: string | null) =>
+                        val === "all" || !val ? "All Requesters" : val
+                      }
+                    </SelectValue>
+                  </div>
+                </SelectTrigger>
+                <SelectContent alignItemWithTrigger={false}>
+                  <SelectItem value="all">All Requesters</SelectItem>
+                  {uniqueRequesters.map((u) => (
+                    <SelectItem key={u} value={u}>
+                      {u}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Retention Status Filter */}
+              <Select
+                value={statusFilter}
+                onValueChange={(val) => {
+                  if (val) {
+                    setStatusFilter(val as "all" | ConflictStatus)
+                    setPageIndex(0)
+                  }
+                }}
+              >
+                <SelectTrigger className="h-8 min-w-32 bg-background text-xs">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <IconAlertTriangle className="size-3.5 shrink-0 text-muted-foreground" />
+                    <SelectValue placeholder="All Statuses">
+                      {(val: string | null) =>
+                        val === "all" || !val
+                          ? "All Statuses"
+                          : val === "safe"
+                            ? "Safe"
+                            : val === "new"
+                              ? "New"
+                              : val === "conflict"
+                                ? "Conflict"
+                                : "Ghost"
+                      }
+                    </SelectValue>
+                  </div>
+                </SelectTrigger>
+                <SelectContent alignItemWithTrigger={false}>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="safe">Safe</SelectItem>
+                  <SelectItem value="new">New</SelectItem>
+                  <SelectItem value="conflict">Conflict</SelectItem>
+                  <SelectItem value="ghost">Ghost</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Reset Button */}
+              {isFiltered && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleReset}
+                  className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <IconRefresh className="mr-1 size-3.5" />
+                  Reset
+                </Button>
               )}
             </div>
           </div>
 
-          {/* Media Type Tabs */}
-          <Tabs
-            value={mediaTypeFilter}
-            onValueChange={(val) => {
-              setMediaTypeFilter(val as "all" | "movie" | "tv")
-              setPageIndex(0)
-            }}
-          >
-            <TabsList>
-              <TabsTrigger value="all" className="text-[11px] uppercase">
-                All
-              </TabsTrigger>
-              <TabsTrigger value="movie" className="gap-1 text-[11px] uppercase">
-                <IconMovie className="size-3.5" />
-                Movie
-              </TabsTrigger>
-              <TabsTrigger value="tv" className="gap-1 text-[11px] uppercase">
-                <IconDeviceTv className="size-3.5" />
-                TV
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <div className="grid w-full grid-cols-2 items-center gap-2 sm:flex sm:w-auto sm:flex-wrap">
-            {/* Requester Filter */}
-            <Select
-              value={requesterFilter}
-              onValueChange={(val) => {
-                if (val) {
-                  setRequesterFilter(val)
-                  setPageIndex(0)
+          {/* Total Count and Refresh */}
+          <div className="flex items-center gap-2">
+            <div className="mr-1 font-mono text-xs text-muted-foreground">
+              {filteredAndSortedItems.length} media items
+            </div>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    className="h-8 text-xs"
+                    disabled={isPending || isRefreshing}
+                    onClick={handleRefresh}
+                  >
+                    <IconRefresh
+                      className={cn(
+                        "mr-1 size-3.5",
+                        isRefreshing && "animate-spin"
+                      )}
+                    />
+                    Refresh
+                  </Button>
                 }
-              }}
-            >
-              <SelectTrigger className="h-8 min-w-36 bg-background text-xs">
-                <div className="flex items-center gap-1.5 truncate">
-                  <IconUser className="size-3.5 shrink-0 text-muted-foreground" />
-                  <SelectValue placeholder="All Requesters">
-                    {(val: string | null) =>
-                      val === "all" || !val ? "All Requesters" : val
-                    }
-                  </SelectValue>
-                </div>
-              </SelectTrigger>
-              <SelectContent alignItemWithTrigger={false}>
-                <SelectItem value="all">All Requesters</SelectItem>
-                {uniqueRequesters.map((u) => (
-                  <SelectItem key={u} value={u}>
-                    {u}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Retention Status Filter */}
-            <Select
-              value={statusFilter}
-              onValueChange={(val) => {
-                if (val) {
-                  setStatusFilter(val as "all" | ConflictStatus)
-                  setPageIndex(0)
-                }
-              }}
-            >
-              <SelectTrigger className="h-8 min-w-32 bg-background text-xs">
-                <div className="flex items-center gap-1.5 truncate">
-                  <IconAlertTriangle className="size-3.5 shrink-0 text-muted-foreground" />
-                  <SelectValue placeholder="All Statuses">
-                    {(val: string | null) =>
-                      val === "all" || !val
-                        ? "All Statuses"
-                        : val === "safe"
-                          ? "Safe"
-                          : val === "new"
-                            ? "New"
-                            : val === "conflict"
-                              ? "Conflict"
-                              : "Ghost"
-                    }
-                  </SelectValue>
-                </div>
-              </SelectTrigger>
-              <SelectContent alignItemWithTrigger={false}>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="safe">Safe</SelectItem>
-                <SelectItem value="new">New</SelectItem>
-                <SelectItem value="conflict">Conflict</SelectItem>
-                <SelectItem value="ghost">Ghost</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Reset Button */}
-            {isFiltered && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleReset}
-                className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
-              >
-                <IconRefresh className="mr-1 size-3.5" />
-                Reset
-              </Button>
-            )}
+              />
+              <TooltipContent className="flex items-center gap-1.5">
+                <span>Refresh audit data</span>
+                <KbdGroup>
+                  <Kbd className="h-4 px-1 text-[10px]">Alt</Kbd>
+                  <Kbd className="h-4 px-1 text-[10px]">R</Kbd>
+                </KbdGroup>
+              </TooltipContent>
+            </Tooltip>
           </div>
-        </div>
-
-        {/* Total Count and Refresh */}
-        <div className="flex items-center gap-2">
-          <div className="mr-1 font-mono text-xs text-muted-foreground">
-            {filteredAndSortedItems.length} media items
-          </div>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="outline"
-                  size="xs"
-                  className="h-8 text-xs"
-                  disabled={isPending || isRefreshing}
-                  onClick={handleRefresh}
-                >
-                  <IconRefresh
-                    className={cn(
-                      "mr-1 size-3.5",
-                      isRefreshing && "animate-spin"
-                    )}
-                  />
-                  Refresh
-                </Button>
-              }
-            />
-            <TooltipContent className="flex items-center gap-1.5">
-              <span>Refresh audit data</span>
-              <KbdGroup>
-                <Kbd className="h-4 px-1 text-[10px]">Alt</Kbd>
-                <Kbd className="h-4 px-1 text-[10px]">R</Kbd>
-              </KbdGroup>
-            </TooltipContent>
-          </Tooltip>
         </div>
       </div>
 
@@ -531,7 +750,7 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
               {/* Sticky Left Requested Media Column */}
               <TableHead
                 onClick={handleTitleHeaderClick}
-                className="sticky left-0 z-10 w-36 min-w-[140px] max-w-[180px] cursor-pointer border-r border-border bg-background p-2 text-muted-foreground uppercase select-none hover:bg-muted/60 sm:w-auto sm:max-w-none sm:min-w-[260px] sm:p-3"
+                className="sticky left-0 z-10 w-36 max-w-[180px] min-w-[140px] cursor-pointer border-r border-border bg-background p-2 text-muted-foreground uppercase select-none hover:bg-muted/60 sm:w-auto sm:max-w-none sm:min-w-[260px] sm:p-3"
               >
                 <div className="flex items-center justify-between gap-1.5">
                   <span className="hidden sm:inline">Requested Media</span>
@@ -553,7 +772,7 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
                 <TableHead
                   key={col.key}
                   onClick={() => handleUserHeaderClick(col.key)}
-                  className="min-w-[120px] cursor-pointer border-l border-border/50 p-3 text-center text-muted-foreground uppercase select-none hover:bg-muted/60"
+                  className="min-w-30 cursor-pointer border-l border-border/50 p-3 text-center text-muted-foreground uppercase select-none hover:bg-muted/60"
                 >
                   <div className="flex flex-col items-center justify-center gap-1.5">
                     <Avatar className="size-6 shrink-0">
@@ -565,7 +784,7 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex items-center gap-1">
-                      <span className="max-w-[90px] truncate">
+                      <span className="max-w-22.5 truncate">
                         {col.username}
                       </span>
                       {sortField === col.key ? (
@@ -591,7 +810,7 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
             {isRefreshing ? (
               Array.from({ length: 8 }).map((_, idx) => (
                 <TableRow key={`refresh-skeleton-${idx}`}>
-                  <TableCell className="sticky left-0 z-10 w-36 min-w-[140px] max-w-[180px] border-r border-border bg-background p-2 sm:w-auto sm:max-w-none sm:min-w-[260px] sm:p-3">
+                  <TableCell className="sticky left-0 z-10 w-36 max-w-45 min-w-35 border-r border-border bg-background p-2 sm:w-auto sm:max-w-none sm:min-w-65 sm:p-3">
                     <div className="flex items-center gap-1.5 sm:gap-2.5">
                       <Skeleton className="size-7 shrink-0 rounded sm:size-9" />
                       <div className="min-w-0 flex-1 space-y-1.5">
@@ -636,7 +855,7 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
                     onClick={() => setSelectedItem(item)}
                   >
                     {/* Sticky Requested Media Cell */}
-                    <TableCell className="sticky left-0 z-10 w-36 min-w-[140px] max-w-[180px] border-r border-border bg-background p-2 font-medium sm:w-auto sm:max-w-none sm:min-w-[260px] sm:p-3">
+                    <TableCell className="sticky left-0 z-10 w-36 max-w-45 min-w-35 border-r border-border bg-background p-2 font-medium sm:w-auto sm:max-w-none sm:min-w-65 sm:p-3">
                       <div className="flex items-center gap-1.5 sm:gap-2.5">
                         {posterSrc ? (
                           <img

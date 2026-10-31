@@ -20,14 +20,16 @@ const buttonVariants = cva(
       },
       size: {
         default:
-          "h-8 min-h-8 sm:min-h-0 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xs: "h-7 sm:h-6 min-h-7 sm:min-h-0 gap-1 rounded-none px-2.5 sm:px-2 text-xs has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 sm:h-7 min-h-8 sm:min-h-0 gap-1 rounded-none px-2.5 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-10 sm:h-9 min-h-10 sm:min-h-0 gap-1.5 px-3 sm:px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        icon: "size-9 sm:size-8 min-h-9 min-w-9 sm:min-h-0 sm:min-w-0",
-        "icon-xs": "size-7 sm:size-6 min-h-7 min-w-7 sm:min-h-0 sm:min-w-0 rounded-none [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-8 sm:size-7 min-h-8 min-w-8 sm:min-h-0 sm:min-w-0 rounded-none",
-        "icon-lg": "size-10 sm:size-9 min-h-10 min-w-10 sm:min-h-0 sm:min-w-0",
+          "h-8 min-h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 sm:min-h-0",
+        xs: "h-7 min-h-7 gap-1 rounded-none px-2.5 text-xs has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 sm:h-6 sm:min-h-0 sm:px-2 [&_svg:not([class*='size-'])]:size-3",
+        sm: "h-8 min-h-8 gap-1 rounded-none px-2.5 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 sm:h-7 sm:min-h-0 [&_svg:not([class*='size-'])]:size-3.5",
+        lg: "h-10 min-h-10 gap-1.5 px-3 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 sm:h-9 sm:min-h-0 sm:px-2.5",
+        icon: "size-9 min-h-9 min-w-9 sm:size-8 sm:min-h-0 sm:min-w-0",
+        "icon-xs":
+          "size-7 min-h-7 min-w-7 rounded-none sm:size-6 sm:min-h-0 sm:min-w-0 [&_svg:not([class*='size-'])]:size-3",
+        "icon-sm":
+          "size-8 min-h-8 min-w-8 rounded-none sm:size-7 sm:min-h-0 sm:min-w-0",
+        "icon-lg": "size-10 min-h-10 min-w-10 sm:size-9 sm:min-h-0 sm:min-w-0",
       },
     },
     defaultVariants: {

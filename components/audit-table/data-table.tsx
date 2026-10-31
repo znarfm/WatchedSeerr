@@ -75,7 +75,16 @@ import {
   IconAlertTriangle,
   IconGhost,
   IconDatabase,
+  IconFilter,
 } from "@tabler/icons-react"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer"
 
 export interface MetricCounts {
   total: number
@@ -399,6 +408,13 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
     currentWatchStateFilter !== "all" ||
     currentWhitelistFilter !== "all"
 
+  const activeFilterCount =
+    (currentStatusFilter !== "all" ? 1 : 0) +
+    (currentTypeFilter !== "all" ? 1 : 0) +
+    (currentRequesterFilter !== "all" ? 1 : 0) +
+    (currentWatchStateFilter !== "all" ? 1 : 0) +
+    (currentWhitelistFilter !== "all" ? 1 : 0)
+
   return (
     <div className="space-y-4">
       {/* Metric Summary Cards */}
@@ -547,234 +563,482 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
       <Separator />
 
       {/* Search & Faceted Filter Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-muted/20 p-3">
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
-          <div className="relative w-full sm:w-64">
-            <Input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Search by title..."
-              value={globalFilter ?? ""}
-              onChange={(e) => setGlobalFilter(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  setGlobalFilter("")
-                  e.currentTarget.blur()
-                }
+      <div className="border border-border bg-muted/20 p-2.5 sm:p-3">
+        {/* Mobile Toolbar */}
+        <div className="flex flex-col gap-2 sm:hidden">
+          {/* Row 1: Search + Refresh */}
+          <div className="flex items-center gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search by title..."
+                value={globalFilter ?? ""}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setGlobalFilter("")
+                    e.currentTarget.blur()
+                  }
+                }}
+                className="h-8 bg-background pr-8 pl-8 text-xs"
+              />
+              <IconSearch className="pointer-events-none absolute top-2 left-2.5 size-4 text-muted-foreground" />
+              {globalFilter && (
+                <button
+                  type="button"
+                  onClick={() => setGlobalFilter("")}
+                  className="absolute top-1/2 right-2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <Kbd className="h-4 px-1 text-[10px]">Esc</Kbd>
+                </button>
+              )}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 shrink-0 px-2.5 text-xs"
+              disabled={isPending || isRefreshing}
+              onClick={handleRefresh}
+              aria-label="Refresh audit data"
+            >
+              <IconRefresh
+                className={cn("size-3.5", isRefreshing && "animate-spin")}
+              />
+              <span className="ml-1 text-xs">Refresh</span>
+            </Button>
+          </div>
+
+          {/* Row 2: Media Type Tabs + Filters Sheet Button */}
+          <div className="flex items-center justify-between gap-2">
+            <Tabs
+              value={currentTypeFilter}
+              onValueChange={(val) => {
+                table
+                  .getColumn("mediaType")
+                  ?.setFilterValue(val === "all" ? undefined : val)
               }}
-              className="h-8 bg-background pr-16 pl-8 text-xs"
-            />
-            <IconSearch className="pointer-events-none absolute top-2 left-2.5 size-4 text-muted-foreground" />
-            <div className="pointer-events-none absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-0.5">
-              {globalFilter ? (
-                <Kbd className="h-4 px-1 text-[10px]">Esc</Kbd>
-              ) : (
-                <KbdGroup>
-                  <Kbd className="h-4 px-1 text-[10px]">Ctrl</Kbd>
-                  <Kbd className="h-4 px-1 text-[10px]">K</Kbd>
-                </KbdGroup>
+            >
+              <TabsList>
+                <TabsTrigger value="all" className="text-[11px] uppercase">
+                  All
+                </TabsTrigger>
+                <TabsTrigger
+                  value="movie"
+                  className="gap-1 text-[11px] uppercase"
+                >
+                  <IconMovie className="size-3.5" />
+                  Movie
+                </TabsTrigger>
+                <TabsTrigger value="tv" className="gap-1 text-[11px] uppercase">
+                  <IconDeviceTv className="size-3.5" />
+                  TV
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className="flex items-center gap-1.5">
+              <Drawer showSwipeHandle>
+                <DrawerTrigger
+                  render={
+                    <Button
+                      variant={isFiltered ? "default" : "outline"}
+                      size="sm"
+                      className="h-8 gap-1.5 px-2.5 text-xs"
+                    >
+                      <IconFilter className="size-3.5" />
+                      <span>Filters</span>
+                      {activeFilterCount > 0 && (
+                        <span className="flex size-4 items-center justify-center rounded-full bg-background text-[10px] font-bold text-foreground">
+                          {activeFilterCount}
+                        </span>
+                      )}
+                    </Button>
+                  }
+                />
+                <DrawerContent className="p-5 pt-2">
+                  <DrawerHeader className="mb-4 text-left">
+                    <DrawerTitle className="text-sm font-semibold">
+                      Filter Audit Queue
+                    </DrawerTitle>
+                    <DrawerDescription className="text-xs text-muted-foreground">
+                      Filter by requester, playback status, or whitelist tag.
+                    </DrawerDescription>
+                  </DrawerHeader>
+
+                  <div className="space-y-3.5">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Requester
+                      </label>
+                      <Select
+                        value={currentRequesterFilter}
+                        onValueChange={(val) => {
+                          table
+                            .getColumn("requester")
+                            ?.setFilterValue(
+                              !val || val === "all" ? undefined : val
+                            )
+                        }}
+                      >
+                        <SelectTrigger className="h-9 w-full bg-background text-xs">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <IconUser className="size-3.5 shrink-0 text-muted-foreground" />
+                            <SelectValue placeholder="All Requesters">
+                              {(val) =>
+                                !val || val === "all" ? "All Requesters" : val
+                              }
+                            </SelectValue>
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent alignItemWithTrigger={false}>
+                          <SelectItem value="all">All Requesters</SelectItem>
+                          {uniqueRequesters.map((user) => (
+                            <SelectItem key={user} value={user}>
+                              {user}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Watch State
+                      </label>
+                      <Select
+                        value={currentWatchStateFilter}
+                        onValueChange={(val) => {
+                          table
+                            .getColumn("progress")
+                            ?.setFilterValue(
+                              !val || val === "all" ? undefined : val
+                            )
+                        }}
+                      >
+                        <SelectTrigger className="h-9 w-full bg-background text-xs">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <IconPlayerPlay className="size-3.5 shrink-0 text-muted-foreground" />
+                            <SelectValue placeholder="All Watch States">
+                              {(val) =>
+                                val === "completed"
+                                  ? "Completed"
+                                  : val === "in_progress"
+                                    ? "In Progress"
+                                    : val === "unplayed"
+                                      ? "Unplayed"
+                                      : "All Watch States"
+                              }
+                            </SelectValue>
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent alignItemWithTrigger={false}>
+                          <SelectItem value="all">All Watch States</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="in_progress">
+                            In Progress
+                          </SelectItem>
+                          <SelectItem value="unplayed">Unplayed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Whitelist Protection
+                      </label>
+                      <Select
+                        value={currentWhitelistFilter}
+                        onValueChange={(val) => {
+                          table
+                            .getColumn("whitelisted")
+                            ?.setFilterValue(
+                              !val || val === "all" ? undefined : val
+                            )
+                        }}
+                      >
+                        <SelectTrigger className="h-9 w-full bg-background text-xs">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <IconBookmark className="size-3.5 shrink-0 text-muted-foreground" />
+                            <SelectValue placeholder="All Items">
+                              {(val) =>
+                                val === "whitelisted"
+                                  ? "Whitelisted"
+                                  : val === "unprotected"
+                                    ? "Unprotected"
+                                    : "All Items"
+                              }
+                            </SelectValue>
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent alignItemWithTrigger={false}>
+                          <SelectItem value="all">All Items</SelectItem>
+                          <SelectItem value="whitelisted">
+                            Whitelisted
+                          </SelectItem>
+                          <SelectItem value="unprotected">
+                            Unprotected
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </DrawerContent>
+              </Drawer>
+
+              {isFiltered && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setGlobalFilter("")
+                    table.resetColumnFilters()
+                  }}
+                >
+                  Reset
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Toolbar */}
+        <div className="hidden sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative w-64">
+              <Input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search by title..."
+                value={globalFilter ?? ""}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setGlobalFilter("")
+                    e.currentTarget.blur()
+                  }
+                }}
+                className="h-8 bg-background pr-16 pl-8 text-xs"
+              />
+              <IconSearch className="pointer-events-none absolute top-2 left-2.5 size-4 text-muted-foreground" />
+              <div className="pointer-events-none absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-0.5">
+                {globalFilter ? (
+                  <Kbd className="h-4 px-1 text-[10px]">Esc</Kbd>
+                ) : (
+                  <KbdGroup>
+                    <Kbd className="h-4 px-1 text-[10px]">Ctrl</Kbd>
+                    <Kbd className="h-4 px-1 text-[10px]">K</Kbd>
+                  </KbdGroup>
+                )}
+              </div>
+            </div>
+
+            <Tabs
+              value={currentTypeFilter}
+              onValueChange={(val) => {
+                table
+                  .getColumn("mediaType")
+                  ?.setFilterValue(val === "all" ? undefined : val)
+              }}
+            >
+              <TabsList>
+                <TabsTrigger value="all" className="text-[11px] uppercase">
+                  All
+                </TabsTrigger>
+                <TabsTrigger
+                  value="movie"
+                  className="gap-1 text-[11px] uppercase"
+                >
+                  <IconMovie className="size-3.5" />
+                  Movie
+                </TabsTrigger>
+                <TabsTrigger value="tv" className="gap-1 text-[11px] uppercase">
+                  <IconDeviceTv className="size-3.5" />
+                  TV
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={currentRequesterFilter}
+                onValueChange={(val) => {
+                  table
+                    .getColumn("requester")
+                    ?.setFilterValue(!val || val === "all" ? undefined : val)
+                }}
+              >
+                <SelectTrigger
+                  size="sm"
+                  className="h-8 min-w-36 bg-background text-xs"
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <IconUser className="size-3.5 shrink-0 text-muted-foreground" />
+                    <SelectValue placeholder="All Requesters">
+                      {(val) =>
+                        !val || val === "all" ? "All Requesters" : val
+                      }
+                    </SelectValue>
+                  </div>
+                </SelectTrigger>
+                <SelectContent alignItemWithTrigger={false}>
+                  <SelectItem value="all">All Requesters</SelectItem>
+                  {uniqueRequesters.map((user) => (
+                    <SelectItem key={user} value={user}>
+                      {user}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={currentWatchStateFilter}
+                onValueChange={(val) => {
+                  table
+                    .getColumn("progress")
+                    ?.setFilterValue(!val || val === "all" ? undefined : val)
+                }}
+              >
+                <SelectTrigger
+                  size="sm"
+                  className="h-8 min-w-36 bg-background text-xs"
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <IconPlayerPlay className="size-3.5 shrink-0 text-muted-foreground" />
+                    <SelectValue placeholder="All Watch States">
+                      {(val) =>
+                        val === "completed"
+                          ? "Completed"
+                          : val === "in_progress"
+                            ? "In Progress"
+                            : val === "unplayed"
+                              ? "Unplayed"
+                              : "All Watch States"
+                      }
+                    </SelectValue>
+                  </div>
+                </SelectTrigger>
+                <SelectContent alignItemWithTrigger={false}>
+                  <SelectItem value="all">All Watch States</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="unplayed">Unplayed</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={currentWhitelistFilter}
+                onValueChange={(val) => {
+                  table
+                    .getColumn("whitelisted")
+                    ?.setFilterValue(!val || val === "all" ? undefined : val)
+                }}
+              >
+                <SelectTrigger
+                  size="sm"
+                  className="h-8 min-w-32 bg-background text-xs"
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <IconBookmark className="size-3.5 shrink-0 text-muted-foreground" />
+                    <SelectValue placeholder="All Items">
+                      {(val) =>
+                        val === "whitelisted"
+                          ? "Whitelisted"
+                          : val === "unprotected"
+                            ? "Unprotected"
+                            : "All Items"
+                      }
+                    </SelectValue>
+                  </div>
+                </SelectTrigger>
+                <SelectContent alignItemWithTrigger={false}>
+                  <SelectItem value="all">All Items</SelectItem>
+                  <SelectItem value="whitelisted">Whitelisted</SelectItem>
+                  <SelectItem value="unprotected">Unprotected</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {isFiltered && (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setGlobalFilter("")
+                    table.resetColumnFilters()
+                  }}
+                >
+                  Reset
+                </Button>
               )}
             </div>
           </div>
 
-          <Tabs
-            value={currentTypeFilter}
-            onValueChange={(val) => {
-              table
-                .getColumn("mediaType")
-                ?.setFilterValue(val === "all" ? undefined : val)
-            }}
-          >
-            <TabsList>
-              <TabsTrigger value="all" className="text-[11px] uppercase">
-                All
-              </TabsTrigger>
-              <TabsTrigger value="movie" className="gap-1 text-[11px] uppercase">
-                <IconMovie className="size-3.5" />
-                Movie
-              </TabsTrigger>
-              <TabsTrigger value="tv" className="gap-1 text-[11px] uppercase">
-                <IconDeviceTv className="size-3.5" />
-                TV
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <div className="grid w-full grid-cols-2 items-center gap-2 sm:flex sm:w-auto sm:flex-wrap">
-            <Select
-              value={currentRequesterFilter}
-              onValueChange={(val) => {
-                table
-                  .getColumn("requester")
-                  ?.setFilterValue(!val || val === "all" ? undefined : val)
-              }}
-            >
-              <SelectTrigger
-                size="sm"
-                className="h-8 min-w-36 bg-background text-xs"
-              >
-                <div className="flex items-center gap-1.5 truncate">
-                  <IconUser className="size-3.5 shrink-0 text-muted-foreground" />
-                  <SelectValue placeholder="All Requesters">
-                    {(val) => (!val || val === "all" ? "All Requesters" : val)}
-                  </SelectValue>
-                </div>
-              </SelectTrigger>
-              <SelectContent alignItemWithTrigger={false}>
-                <SelectItem value="all">All Requesters</SelectItem>
-                {uniqueRequesters.map((user) => (
-                  <SelectItem key={user} value={user}>
-                    {user}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={currentWatchStateFilter}
-              onValueChange={(val) => {
-                table
-                  .getColumn("progress")
-                  ?.setFilterValue(!val || val === "all" ? undefined : val)
-              }}
-            >
-              <SelectTrigger
-                size="sm"
-                className="h-8 min-w-36 bg-background text-xs"
-              >
-                <div className="flex items-center gap-1.5 truncate">
-                  <IconPlayerPlay className="size-3.5 shrink-0 text-muted-foreground" />
-                  <SelectValue placeholder="All Watch States">
-                    {(val) =>
-                      val === "completed"
-                        ? "Completed"
-                        : val === "in_progress"
-                          ? "In Progress"
-                          : val === "unplayed"
-                            ? "Unplayed"
-                            : "All Watch States"
-                    }
-                  </SelectValue>
-                </div>
-              </SelectTrigger>
-              <SelectContent alignItemWithTrigger={false}>
-                <SelectItem value="all">All Watch States</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="unplayed">Unplayed</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={currentWhitelistFilter}
-              onValueChange={(val) => {
-                table
-                  .getColumn("whitelisted")
-                  ?.setFilterValue(!val || val === "all" ? undefined : val)
-              }}
-            >
-              <SelectTrigger
-                size="sm"
-                className="h-8 min-w-32 bg-background text-xs"
-              >
-                <div className="flex items-center gap-1.5 truncate">
-                  <IconBookmark className="size-3.5 shrink-0 text-muted-foreground" />
-                  <SelectValue placeholder="All Items">
-                    {(val) =>
-                      val === "whitelisted"
-                        ? "Whitelisted"
-                        : val === "unprotected"
-                          ? "Unprotected"
-                          : "All Items"
-                    }
-                  </SelectValue>
-                </div>
-              </SelectTrigger>
-              <SelectContent alignItemWithTrigger={false}>
-                <SelectItem value="all">All Items</SelectItem>
-                <SelectItem value="whitelisted">Whitelisted</SelectItem>
-                <SelectItem value="unprotected">Unprotected</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {isFiltered && (
-              <Button
-                variant="ghost"
-                size="xs"
-                className="text-xs text-muted-foreground hover:text-foreground"
-                onClick={() => {
-                  setGlobalFilter("")
-                  table.resetColumnFilters()
-                }}
-              >
-                Reset
-              </Button>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {table.getFilteredSelectedRowModel().rows.length > 0 && (
-            <>
-              <Badge variant="secondary" className="font-mono text-xs">
-                {table.getFilteredSelectedRowModel().rows.length} selected
-              </Badge>
-              {([true, false] as const).map((want) => (
-                <Button
-                  key={String(want)}
-                  variant="outline"
-                  size="xs"
-                  className="h-8 gap-1 text-xs"
-                  disabled={isPending}
-                  onClick={() => {
-                    table
-                      .getFilteredSelectedRowModel()
-                      .rows.filter(
-                        (r) =>
-                          r.depth === 0 && !!r.original.isWhitelisted !== want
-                      )
-                      .forEach((r) => handleToggleWhitelist(r.original))
-                    table.resetRowSelection()
-                  }}
-                >
-                  {want ? (
-                    <IconBookmark className="size-3.5 text-amber-500" />
-                  ) : (
-                    <IconBookmarkOff className="size-3.5" />
-                  )}
-                  {want ? "Whitelist" : "Unwhitelist"}
-                </Button>
-              ))}
-            </>
-          )}
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="outline"
-                  size="xs"
-                  className="h-8 text-xs"
-                  disabled={isPending || isRefreshing}
-                  onClick={handleRefresh}
-                >
-                  <IconRefresh
-                    className={cn(
-                      "mr-1 size-3.5",
-                      isRefreshing && "animate-spin"
+          <div className="flex items-center gap-2">
+            {table.getFilteredSelectedRowModel().rows.length > 0 && (
+              <>
+                <Badge variant="secondary" className="font-mono text-xs">
+                  {table.getFilteredSelectedRowModel().rows.length} selected
+                </Badge>
+                {([true, false] as const).map((want) => (
+                  <Button
+                    key={String(want)}
+                    variant="outline"
+                    size="xs"
+                    className="h-8 gap-1 text-xs"
+                    disabled={isPending}
+                    onClick={() => {
+                      table
+                        .getFilteredSelectedRowModel()
+                        .rows.filter(
+                          (r) =>
+                            r.depth === 0 && !!r.original.isWhitelisted !== want
+                        )
+                        .forEach((r) => handleToggleWhitelist(r.original))
+                      table.resetRowSelection()
+                    }}
+                  >
+                    {want ? (
+                      <IconBookmark className="size-3.5 text-amber-500" />
+                    ) : (
+                      <IconBookmarkOff className="size-3.5" />
                     )}
-                  />
-                  Refresh
-                </Button>
-              }
-            />
-            <TooltipContent className="flex items-center gap-1.5">
-              <span>Refresh audit data</span>
-              <KbdGroup>
-                <Kbd className="h-4 px-1 text-[10px]">Alt</Kbd>
-                <Kbd className="h-4 px-1 text-[10px]">R</Kbd>
-              </KbdGroup>
-            </TooltipContent>
-          </Tooltip>
+                    {want ? "Whitelist" : "Unwhitelist"}
+                  </Button>
+                ))}
+              </>
+            )}
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    className="h-8 text-xs"
+                    disabled={isPending || isRefreshing}
+                    onClick={handleRefresh}
+                  >
+                    <IconRefresh
+                      className={cn(
+                        "mr-1 size-3.5",
+                        isRefreshing && "animate-spin"
+                      )}
+                    />
+                    Refresh
+                  </Button>
+                }
+              />
+              <TooltipContent className="flex items-center gap-1.5">
+                <span>Refresh audit data</span>
+                <KbdGroup>
+                  <Kbd className="h-4 px-1 text-[10px]">Alt</Kbd>
+                  <Kbd className="h-4 px-1 text-[10px]">R</Kbd>
+                </KbdGroup>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
       </div>
 
