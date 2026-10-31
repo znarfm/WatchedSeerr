@@ -364,7 +364,7 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
               variant="secondary"
               title={item.qualityFull}
               className={cn(
-                "max-w-[72px] truncate px-1 py-0 font-mono text-[10px]",
+                "max-w-[100px] sm:max-w-[120px] truncate px-1 py-0 font-mono text-[10px]",
                 codecClass(item.qualityFull)
               )}
             >

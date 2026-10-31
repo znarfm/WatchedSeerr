@@ -531,7 +531,7 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
               {/* Sticky Left Requested Media Column */}
               <TableHead
                 onClick={handleTitleHeaderClick}
-                className="sticky left-0 z-10 w-32 max-w-32 min-w-32 cursor-pointer border-r border-border bg-background p-2 text-muted-foreground uppercase select-none hover:bg-muted/60 sm:w-auto sm:max-w-none sm:min-w-[260px] sm:p-3"
+                className="sticky left-0 z-10 w-36 min-w-[140px] max-w-[180px] cursor-pointer border-r border-border bg-background p-2 text-muted-foreground uppercase select-none hover:bg-muted/60 sm:w-auto sm:max-w-none sm:min-w-[260px] sm:p-3"
               >
                 <div className="flex items-center justify-between gap-1.5">
                   <span className="hidden sm:inline">Requested Media</span>
@@ -591,7 +591,7 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
             {isRefreshing ? (
               Array.from({ length: 8 }).map((_, idx) => (
                 <TableRow key={`refresh-skeleton-${idx}`}>
-                  <TableCell className="sticky left-0 z-10 w-32 max-w-32 min-w-32 border-r border-border bg-background p-2 sm:w-auto sm:max-w-none sm:min-w-[260px] sm:p-3">
+                  <TableCell className="sticky left-0 z-10 w-36 min-w-[140px] max-w-[180px] border-r border-border bg-background p-2 sm:w-auto sm:max-w-none sm:min-w-[260px] sm:p-3">
                     <div className="flex items-center gap-1.5 sm:gap-2.5">
                       <Skeleton className="size-7 shrink-0 rounded sm:size-9" />
                       <div className="min-w-0 flex-1 space-y-1.5">
@@ -636,7 +636,7 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
                     onClick={() => setSelectedItem(item)}
                   >
                     {/* Sticky Requested Media Cell */}
-                    <TableCell className="sticky left-0 z-10 w-32 max-w-32 min-w-32 border-r border-border bg-background p-2 font-medium sm:w-auto sm:max-w-none sm:min-w-[260px] sm:p-3">
+                    <TableCell className="sticky left-0 z-10 w-36 min-w-[140px] max-w-[180px] border-r border-border bg-background p-2 font-medium sm:w-auto sm:max-w-none sm:min-w-[260px] sm:p-3">
                       <div className="flex items-center gap-1.5 sm:gap-2.5">
                         {posterSrc ? (
                           <img

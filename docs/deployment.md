@@ -185,13 +185,17 @@ Detailed setup instructions: [docs/proxmox-cron.md](proxmox-cron.md).
 
 ## Updating
 
-### Docker
+### Docker (Direct Git Pull)
+
+Run on the machine/server where Docker is running:
 
 ```bash
 cd /opt/watchedseerr
 git pull
 docker compose up -d --build
 ```
+
+`--build` forces Docker to recreate the image with your latest code changes.
 
 ### Native LXC
 

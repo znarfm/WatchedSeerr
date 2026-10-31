@@ -138,6 +138,13 @@ docker compose up -d --build
 ```
 Persists SQLite database to `./data/watchedseerr.db`.
 
+To apply updates after pushing code:
+```bash
+git pull
+docker compose up -d --build
+```
+`--build` forces Docker to recreate the image with the latest changes.
+
 ---
 
 ## Automated Audit / Cron
