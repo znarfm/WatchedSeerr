@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import type { Column, ColumnDef, RowData } from "@tanstack/react-table"
 import type { AuditMediaItem } from "@/types"
 import { formatMediaSize } from "@/lib/utils"
