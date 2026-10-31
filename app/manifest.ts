@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "WatchedSeerr",
     short_name: "WatchedSeerr",
     description:
-      "Automated media retention and lifecycle auditor bridging Jellyfin playback history with Overseerr request management.",
+      "Automated media retention and lifecycle auditor bridging Jellyfin playback history with Seerr request management.",
     start_url: "/",
     display: "standalone",
     background_color: "#09090b",

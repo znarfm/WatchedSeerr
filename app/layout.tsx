@@ -31,15 +31,20 @@ export const metadata: Metadata = {
     template: "%s | WatchedSeerr",
   },
   description:
-    "Automated media retention and lifecycle auditor bridging Jellyfin playback history with Overseerr request management.",
+    "Automated media retention and lifecycle auditor bridging Jellyfin playback history with Seerr request management.",
   keywords: [
     "Jellyfin",
     "Overseerr",
     "Jellyseerr",
+    "Seerr",
     "Media Retention",
     "Disk Cleanup",
     "Media Lifecycle",
     "Audit Queue",
+    "Arr Stack",
+    "Radarr",
+    "Sonarr",
+    "Media server"
   ],
   icons: {
     icon: "/icon.svg",
@@ -53,14 +58,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: "WatchedSeerr | Media Retention & Lifecycle Auditor",
     description:
-      "Automated media retention and lifecycle auditor bridging Jellyfin playback history with Overseerr request management.",
+      "Automated media retention and lifecycle auditor bridging Jellyfin playback history with Seerr request management.",
     type: "website",
   },
   twitter: {
     card: "summary",
     title: "WatchedSeerr",
     description:
-      "Automated media retention and lifecycle auditor bridging Jellyfin playback history with Overseerr request management.",
+      "Automated media retention and lifecycle auditor bridging Jellyfin playback history with Seerr request management.",
   },
 }
 

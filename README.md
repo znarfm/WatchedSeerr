@@ -1,6 +1,6 @@
 # WatchedSeerr
 
-Media lifecycle auditor cross-referencing Jellyseerr/Overseerr requests with Jellyfin playback history across household members for safe retention triage and disk reclamation.
+Media lifecycle auditor cross-referencing Seerr requests with Jellyfin playback history across household members for safe retention triage and disk reclamation.
 
 ---
 
@@ -54,7 +54,7 @@ Configure `.env.local`:
 JELLYFIN_URL="http://localhost:8096"
 JELLYFIN_API_KEY="your-jellyfin-token"
 
-# Overseerr / Jellyseerr (Required)
+# Seerr (Required)
 SEERR_URL="http://localhost:5055"
 SEERR_API_KEY="your-seerr-token"
 
@@ -95,8 +95,8 @@ pnpm dev
 |---|---|---|---|
 | `JELLYFIN_URL` | Yes | — | Base URL for Jellyfin server. |
 | `JELLYFIN_API_KEY` | Yes | — | Jellyfin API token. |
-| `SEERR_URL` | Yes | — | Base URL for Jellyseerr / Overseerr. |
-| `SEERR_API_KEY` | Yes | — | Jellyseerr / Overseerr API key. |
+| `SEERR_URL` | Yes | — | Base URL for Seerr. |
+| `SEERR_API_KEY` | Yes | — | Seerr API key. |
 | `RADARR_URL` | No | — | Radarr server URL (for movie purges). |
 | `RADARR_API_KEY` | No | — | Radarr API key. |
 | `SONARR_URL` | No | — | Sonarr server URL (for series purges). |
