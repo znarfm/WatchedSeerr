@@ -660,4 +660,43 @@ describe("User Reconciliation and Watch Status Seam", () => {
       globalThis.fetch = originalFetch
     }
   })
+
+  it("getEpisodes gracefully handles 404 by retrying without userId and fallback to empty array", async () => {
+    let callUrls: string[] = []
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      const urlStr = url.toString()
+      callUrls.push(urlStr)
+      if (urlStr.includes("userId=restricted-user")) {
+        return { ok: false, status: 404, statusText: "Not Found" } as Response
+      }
+      if (urlStr.includes("/Shows/show-404/Episodes")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ Items: [{ Id: "ep-fallback", Name: "Ep 1" }] }),
+        } as Response
+      }
+      return { ok: false, status: 404, statusText: "Not Found" } as Response
+    }) as unknown as typeof globalThis.fetch
+
+    try {
+      const client = new JellyfinClient("http://jellyfin.test", "token")
+      const episodes = await client.getEpisodes("show-404", "restricted-user")
+      assert.equal(episodes.length, 1)
+      assert.equal(episodes[0].Id, "ep-fallback")
+      assert.ok(callUrls.some((u) => u.includes("userId=restricted-user")))
+      assert.ok(
+        callUrls.some(
+          (u) => u.includes("/Shows/show-404/Episodes") && !u.includes("userId=")
+        )
+      )
+
+      // Total 404 returns empty array rather than throwing
+      const emptyEpisodes = await client.getEpisodes("missing-show")
+      assert.deepEqual(emptyEpisodes, [])
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
 })

@@ -383,6 +383,7 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
     onColumnVisibilityChange: setColumnVisibility,
     onExpandedChange: setExpanded,
     onPaginationChange: setPagination,
+    autoResetPageIndex: false,
     getSubRows: (row) => row.subRows,
     paginateExpandedRows: false,
     getCoreRowModel: getCoreRowModel(),

@@ -102,10 +102,39 @@ export class JellyfinClient {
     const userParam = userId
       ? `?userId=${userId}&Fields=UserData,RunTimeTicks,MediaSources,MediaStreams,Size`
       : "?Fields=UserData,RunTimeTicks,MediaSources,MediaStreams,Size"
-    const res = await this.request<JellyfinItemsResponse>(
-      `/Shows/${seriesId}/Episodes${userParam}`
-    )
-    return res.Items || []
+
+    try {
+      const res = await this.request<JellyfinItemsResponse>(
+        `/Shows/${seriesId}/Episodes${userParam}`
+      )
+      return res.Items || []
+    } catch (err: unknown) {
+      // If 404 and userId was specified, user might have restricted permissions; retry without userId
+      if (userId && err instanceof Error && err.message.includes("404")) {
+        try {
+          const fallbackRes = await this.request<JellyfinItemsResponse>(
+            `/Shows/${seriesId}/Episodes?Fields=UserData,RunTimeTicks,MediaSources,MediaStreams,Size`
+          )
+          return fallbackRes.Items || []
+        } catch {
+          // Fall through to generic parent query
+        }
+      }
+
+      // If still 404, item might be a Season/Folder or empty series; query /Items with ParentId
+      if (err instanceof Error && err.message.includes("404")) {
+        try {
+          const itemsRes = await this.request<JellyfinItemsResponse>(
+            `/Items?ParentId=${seriesId}&Recursive=true&IncludeItemTypes=Episode&Fields=UserData,RunTimeTicks,MediaSources,MediaStreams,Size`
+          )
+          return itemsRes.Items || []
+        } catch {
+          return []
+        }
+      }
+
+      throw err
+    }
   }
 
   /**

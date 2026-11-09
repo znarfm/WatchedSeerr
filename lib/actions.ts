@@ -135,7 +135,9 @@ export async function getSeriesEpisodesAction(
     const sonarr = new SonarrClient()
 
     const [jellyfinEpisodes, sonarrSeries] = await Promise.all([
-      jellyfin.getEpisodes(jellyfinItemId, parsedUserId),
+      jellyfin
+        .getEpisodes(jellyfinItemId, parsedUserId)
+        .catch(() => [] as JellyfinItem[]),
       sonarr.isConfigured()
         ? sonarr.getSeriesByTmdbId(parsedTmdbId)
         : Promise.resolve(null),
