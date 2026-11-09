@@ -1,7 +1,9 @@
 import { JellyfinClient } from "./clients/jellyfin"
 import { SeerrClient } from "./clients/seerr"
 import { isItemWhitelisted } from "./whitelist"
+import { calculateDaysAgo, buildEpisodeSubRows } from "./utils"
 import type {
+  AuditEpisodeItem,
   AuditMediaItem,
   AuditReport,
   ConflictStatus,
@@ -64,12 +66,14 @@ export function buildMediaExternalLinks(params: {
 
   const imdb = imdbId ? `https://www.imdb.com/title/${imdbId}/` : undefined
   const letterboxd =
-    mediaType === "movie" ? `https://letterboxd.com/tmdb/${tmdbId}/` : undefined
+    mediaType === "movie" && tmdbId > 0
+      ? `https://letterboxd.com/tmdb/${tmdbId}/`
+      : undefined
 
   let arr: string | undefined
   if (serviceUrl) {
     arr = serviceUrl
-  } else if (mediaType === "movie" && radarrBase) {
+  } else if (mediaType === "movie" && radarrBase && (externalServiceSlug || tmdbId > 0)) {
     arr = `${radarrBase}/movie/${externalServiceSlug || tmdbId}`
   } else if (mediaType === "tv" && sonarrBase) {
     arr = externalServiceSlug
@@ -84,7 +88,10 @@ export function buildMediaExternalLinks(params: {
         }`
       : undefined
 
-  const seerr = seerrBase ? `${seerrBase}/${mediaType}/${tmdbId}` : undefined
+  const seerr =
+    seerrBase && tmdbId > 0
+      ? `${seerrBase}/${mediaType}/${tmdbId}`
+      : undefined
 
   return { imdb, letterboxd, arr, jellyfin, seerr }
 }
@@ -154,13 +161,7 @@ const titleDetailsCache = new Map<
   }
 >()
 
-function calculateDaysAgo(dateStr?: string): number | null {
-  if (!dateStr) return null
-  const date = new Date(dateStr)
-  if (isNaN(date.getTime())) return null
-  const diffMs = Date.now() - date.getTime()
-  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
-}
+export { calculateDaysAgo, buildEpisodeSubRows } from "./utils"
 
 function mapUserWatchStatus(
   item?: JellyfinItem,
@@ -436,6 +437,237 @@ export async function auditMedia(
 
   const auditItems: AuditMediaItem[] = []
   const seenTvTmdbIds = new Set<number>()
+  const matchedJfItemIds = new Set<string>()
+
+  function resolveAuditItem(params: {
+    jellyfinItem: JellyfinItem
+    tmdbId: number
+    mediaType: MediaType
+    requestedAt: string
+    requestId: number
+    itemIdentifier: string
+    is4k?: boolean
+    imdbId?: string
+    externalServiceSlug?: string
+    serviceUrl?: string
+    matchedJellyfinUser?: JellyfinUser
+    requesterUsername: string
+    requesterAvatarUrl?: string
+    reqByAvatar?: string
+    reqById?: number
+    isUnrequested?: boolean
+  }): AuditMediaItem {
+    const {
+      jellyfinItem,
+      tmdbId,
+      mediaType,
+      requestedAt,
+      requestId,
+      itemIdentifier,
+      is4k = false,
+      imdbId,
+      externalServiceSlug,
+      serviceUrl,
+      matchedJellyfinUser,
+      requesterUsername,
+      requesterAvatarUrl,
+      reqByAvatar,
+      reqById = 0,
+      isUnrequested = false,
+    } = params
+
+    const cached = tmdbId
+      ? titleDetailsCache.get(`${mediaType}-${tmdbId}`)
+      : undefined
+    const title =
+      jellyfinItem.Name ||
+      cached?.title ||
+      (tmdbId ? `TMDB ${tmdbId}` : `Media ${jellyfinItem.Id}`)
+    const year = jellyfinItem.ProductionYear || cached?.year
+    const posterPath = cached?.posterPath
+    const overview = jellyfinItem.Overview || cached?.overview
+    const genres =
+      jellyfinItem.Genres && jellyfinItem.Genres.length > 0
+        ? jellyfinItem.Genres
+        : cached?.genres
+    const jellyfinImageTag = jellyfinItem.ImageTags?.Primary
+
+    const epStats = jellyfinItem.Id
+      ? seriesEpisodeStats.get(jellyfinItem.Id)
+      : undefined
+    const videoStream =
+      jellyfinItem.MediaSources?.[0]?.MediaStreams?.find(
+        (s) => s.Type === "Video"
+      ) || epStats?.videoStream
+    const { quality, qualityFull } = normalizeVideoQuality(videoStream, is4k)
+    const sizeBytes =
+      jellyfinItem.Size ??
+      jellyfinItem.MediaSources?.[0]?.Size ??
+      (epStats && epStats.totalSize > 0 ? epStats.totalSize : undefined)
+
+    const resolvedImdbId = jellyfinItem.ProviderIds?.Imdb || imdbId
+    const externalLinks = buildMediaExternalLinks({
+      mediaType,
+      tmdbId,
+      imdbId: resolvedImdbId,
+      jellyfinItemId: jellyfinItem.Id,
+      jellyfinServerId: jellyfinItem.ServerId,
+      externalServiceSlug,
+      serviceUrl,
+    })
+
+    const householdStates: UserPlaybackState[] = []
+    let requesterState: UserPlaybackState = {
+      userId: matchedJellyfinUser?.Id || "",
+      username: requesterUsername,
+      avatarUrl: matchedJellyfinUser
+        ? jfAvatarMap.get(matchedJellyfinUser.Id)
+        : undefined,
+      isRequester: !isUnrequested,
+      status: "unplayed",
+      progressPercent: 0,
+      playCount: 0,
+    }
+
+    let mostRecentPlayedDate: string | undefined
+
+    for (const jUser of jellyfinUsers) {
+      const isRequester = !isUnrequested && matchedJellyfinUser?.Id === jUser.Id
+      const userItems = userItemsMap.get(jUser.Id)
+      const rawUserItem = userItems?.get(jellyfinItem.Id)
+      const userItem = rawUserItem
+        ? {
+            ...rawUserItem,
+            RunTimeTicks: rawUserItem.RunTimeTicks ?? jellyfinItem.RunTimeTicks,
+          }
+        : jellyfinItem
+
+      const { status, progressPercent, episodesWatched, totalEpisodes } =
+        mapUserWatchStatus(userItem)
+
+      const rawLastPlayed = userItem.UserData?.LastPlayedDate
+      const lastPlayed = status === "unplayed" ? undefined : rawLastPlayed
+      if (lastPlayed) {
+        if (
+          !mostRecentPlayedDate ||
+          new Date(lastPlayed) > new Date(mostRecentPlayedDate)
+        ) {
+          mostRecentPlayedDate = lastPlayed
+        }
+      }
+
+      const state: UserPlaybackState = {
+        userId: jUser.Id,
+        username: jfCanonicalName.get(jUser.Id) || jUser.Name,
+        avatarUrl: jfAvatarMap.get(jUser.Id),
+        isRequester,
+        status,
+        progressPercent,
+        lastPlayedDate: lastPlayed,
+        playCount:
+          status === "unplayed" ? 0 : userItem.UserData?.PlayCount || 0,
+        episodesWatched,
+        totalEpisodes,
+      }
+
+      if (isRequester) {
+        requesterState = { ...state, username: requesterUsername }
+      } else {
+        householdStates.push(state)
+      }
+    }
+
+    const daysSincePlayed = calculateDaysAgo(mostRecentPlayedDate)
+    const daysSinceAdded = calculateDaysAgo(requestedAt) ?? 0
+
+    let conflictStatus: ConflictStatus = "safe"
+    let conflictReason = "No active household viewing detected"
+
+    const activeNonRequesters = householdStates.filter(
+      (h) =>
+        h.status === "in_progress" ||
+        (h.lastPlayedDate &&
+          (calculateDaysAgo(h.lastPlayedDate) ?? 999) <= conflictThreshold)
+    )
+
+    if (activeNonRequesters.length > 0) {
+      conflictStatus = "conflict"
+      conflictReason = `Active viewer(s) in household: ${activeNonRequesters.map((u) => u.username).join(", ")}`
+    } else if (isUnrequested) {
+      const anyWatched = householdStates.some(
+        (h) => h.status === "completed" || h.status === "in_progress"
+      )
+      if (!anyWatched) {
+        const daysAgo = calculateDaysAgo(requestedAt)
+        if (daysAgo !== null && daysAgo < ghostThreshold) {
+          conflictStatus = "new"
+          conflictReason = `Recently added (${daysAgo} days ago) — awaiting first watch`
+        } else if (daysAgo !== null && daysAgo >= ghostThreshold) {
+          conflictStatus = "ghost"
+          conflictReason = `Never watched by household (${daysAgo} days since added)`
+        }
+      }
+    } else if (requesterState.status === "unplayed") {
+      if (daysSinceAdded >= ghostThreshold) {
+        conflictStatus = "ghost"
+        conflictReason = `Requester has never watched item (${daysSinceAdded} days since requested)`
+      } else {
+        conflictStatus = "new"
+        conflictReason = `Recently requested (${daysSinceAdded} days ago) — awaiting first watch`
+      }
+    } else if (requesterState.status === "in_progress") {
+      const requesterDays = calculateDaysAgo(requesterState.lastPlayedDate)
+      if (requesterDays !== null && requesterDays <= conflictThreshold) {
+        conflictStatus = "conflict"
+        conflictReason = `Requester is currently watching (${requesterState.progressPercent}%, ${requesterDays} days ago)`
+      } else {
+        conflictStatus = "safe"
+        conflictReason = "Requester stalled/abandoned playback"
+      }
+    }
+
+    const whitelisted = isItemWhitelisted(itemIdentifier)
+
+    let finalAvatarUrl = requesterAvatarUrl
+    if (!finalAvatarUrl && matchedJellyfinUser) {
+      finalAvatarUrl = jfAvatarMap.get(matchedJellyfinUser.Id)
+    } else if (!finalAvatarUrl && reqByAvatar) {
+      finalAvatarUrl = `/api/proxy/avatar?avatar=${encodeURIComponent(reqByAvatar)}`
+    }
+
+    return {
+      id: itemIdentifier,
+      requestId,
+      tmdbId,
+      imdbId: resolvedImdbId,
+      jellyfinItemId: jellyfinItem.Id,
+      title,
+      year,
+      mediaType,
+      posterPath,
+      overview,
+      genres,
+      quality,
+      qualityFull,
+      jellyfinImageTag,
+      sizeBytes,
+      externalLinks,
+      requestedAt,
+      requester: {
+        id: reqById,
+        username: requesterUsername,
+        avatar: reqByAvatar,
+        requesterAvatarUrl: finalAvatarUrl,
+        matchedJellyfinUserId: matchedJellyfinUser?.Id,
+      },
+      requesterState,
+      householdStates,
+      daysSinceLastPlayed: daysSincePlayed,
+      conflictStatus,
+      conflictReason,
+      isWhitelisted: whitelisted,
+    }
+  }
 
   for (const req of requests) {
     const media = req.media
@@ -457,45 +689,7 @@ export async function auditMedia(
 
     // Skip tracked/unacquired media that does not exist in Jellyfin
     if (!jellyfinItem) continue
-
-    // Resolve metadata: title, year, overview, genres, posterPath
-    const cached = titleDetailsCache.get(`${mediaType}-${tmdbId}`)
-    const title = jellyfinItem.Name || cached?.title || `TMDB ${tmdbId}`
-    const year = jellyfinItem.ProductionYear || cached?.year
-    const posterPath = cached?.posterPath
-    const overview = jellyfinItem.Overview || cached?.overview
-    const genres =
-      jellyfinItem.Genres && jellyfinItem.Genres.length > 0
-        ? jellyfinItem.Genres
-        : cached?.genres
-    const jellyfinImageTag = jellyfinItem.ImageTags?.Primary
-
-    // Quality & video stream resolution
-    const epStats = jellyfinItem
-      ? seriesEpisodeStats.get(jellyfinItem.Id)
-      : undefined
-    const videoStream =
-      jellyfinItem?.MediaSources?.[0]?.MediaStreams?.find(
-        (s) => s.Type === "Video"
-      ) || epStats?.videoStream
-    const { quality, qualityFull } = normalizeVideoQuality(
-      videoStream,
-      req.is4k
-    )
-    const sizeBytes =
-      jellyfinItem?.Size ??
-      jellyfinItem?.MediaSources?.[0]?.Size ??
-      (epStats && epStats.totalSize > 0 ? epStats.totalSize : undefined)
-    const imdbId = jellyfinItem?.ProviderIds?.Imdb || media.imdbId
-    const externalLinks = buildMediaExternalLinks({
-      mediaType,
-      tmdbId,
-      imdbId,
-      jellyfinItemId: jellyfinItem?.Id,
-      jellyfinServerId: jellyfinItem?.ServerId,
-      externalServiceSlug: media.externalServiceSlug,
-      serviceUrl: media.serviceUrl,
-    })
+    matchedJfItemIds.add(jellyfinItem.Id)
 
     // Match requester profile
     const reqBy = req.requestedBy
@@ -518,148 +712,50 @@ export async function auditMedia(
       reqBy?.username ||
       "Unknown"
 
-    const householdStates: UserPlaybackState[] = []
-    let requesterState: UserPlaybackState = {
-      userId: matchedJellyfinUser?.Id || "unknown",
-      username: requesterUsername,
-      avatarUrl: matchedJellyfinUser
-        ? jfAvatarMap.get(matchedJellyfinUser.Id)
-        : undefined,
-      isRequester: true,
-      status: "unplayed",
-      progressPercent: 0,
-      playCount: 0,
-    }
-
-    let mostRecentPlayedDate: string | undefined
-
-    if (jellyfinItem) {
-      for (const jUser of jellyfinUsers) {
-        const isRequester = matchedJellyfinUser?.Id === jUser.Id
-        const userItems = userItemsMap.get(jUser.Id)
-        const rawUserItem = userItems?.get(jellyfinItem.Id)
-        const userItem = rawUserItem
-          ? {
-              ...rawUserItem,
-              RunTimeTicks:
-                rawUserItem.RunTimeTicks ?? jellyfinItem.RunTimeTicks,
-            }
-          : jellyfinItem
-
-        const { status, progressPercent, episodesWatched, totalEpisodes } =
-          mapUserWatchStatus(userItem)
-
-        const rawLastPlayed = userItem.UserData?.LastPlayedDate
-        const lastPlayed = status === "unplayed" ? undefined : rawLastPlayed
-        if (lastPlayed) {
-          if (
-            !mostRecentPlayedDate ||
-            new Date(lastPlayed) > new Date(mostRecentPlayedDate)
-          ) {
-            mostRecentPlayedDate = lastPlayed
-          }
-        }
-
-        const state: UserPlaybackState = {
-          userId: jUser.Id,
-          username: jfCanonicalName.get(jUser.Id) || jUser.Name,
-          avatarUrl: jfAvatarMap.get(jUser.Id),
-          isRequester,
-          status,
-          progressPercent,
-          lastPlayedDate: lastPlayed,
-          playCount:
-            status === "unplayed" ? 0 : userItem.UserData?.PlayCount || 0,
-          episodesWatched,
-          totalEpisodes,
-        }
-
-        if (isRequester) {
-          requesterState = { ...state, username: requesterUsername }
-        } else {
-          householdStates.push(state)
-        }
-      }
-    }
-
-    const daysSincePlayed = calculateDaysAgo(mostRecentPlayedDate)
-    const daysSinceAdded = calculateDaysAgo(requestedAt) ?? 0
-
-    // Conflict Resolution Logic
-    let conflictStatus: ConflictStatus = "safe"
-    let conflictReason = "No active household viewing detected"
-
-    const activeNonRequesters = householdStates.filter(
-      (h) =>
-        h.status === "in_progress" ||
-        (h.lastPlayedDate &&
-          (calculateDaysAgo(h.lastPlayedDate) ?? 999) <= conflictThreshold)
+    auditItems.push(
+      resolveAuditItem({
+        jellyfinItem,
+        tmdbId,
+        mediaType,
+        requestedAt,
+        requestId: req.id,
+        itemIdentifier: `req-${req.id}-tmdb-${tmdbId}`,
+        is4k: req.is4k,
+        imdbId: media.imdbId,
+        externalServiceSlug: media.externalServiceSlug,
+        serviceUrl: media.serviceUrl,
+        matchedJellyfinUser,
+        requesterUsername,
+        reqByAvatar: reqBy?.avatar,
+        reqById: reqBy?.id || 0,
+      })
     )
+  }
 
-    if (activeNonRequesters.length > 0) {
-      conflictStatus = "conflict"
-      conflictReason = `Active viewer(s) in household: ${activeNonRequesters.map((u) => u.username).join(", ")}`
-    } else if (requesterState.status === "unplayed") {
-      if (daysSinceAdded >= ghostThreshold) {
-        conflictStatus = "ghost"
-        conflictReason = `Requester has never watched item (${daysSinceAdded} days since requested)`
-      } else {
-        conflictStatus = "new"
-        conflictReason = `Recently requested (${daysSinceAdded} days ago) — awaiting first watch`
-      }
-    } else if (requesterState.status === "in_progress") {
-      const requesterDays = calculateDaysAgo(requesterState.lastPlayedDate)
-      if (requesterDays !== null && requesterDays <= conflictThreshold) {
-        conflictStatus = "conflict"
-        conflictReason = `Requester is currently watching (${requesterState.progressPercent}%, ${requesterDays} days ago)`
-      } else {
-        conflictStatus = "safe"
-        conflictReason = "Requester stalled/abandoned playback"
-      }
+  for (const item of allLibraryItems) {
+    if (matchedJfItemIds.has(item.Id)) continue
+    if (item.Type !== "Movie" && item.Type !== "Series") continue
+
+    const tmdbId = item.ProviderIds?.Tmdb ? Number(item.ProviderIds.Tmdb) : 0
+    const mediaType: MediaType = item.Type === "Series" ? "tv" : "movie"
+
+    if (mediaType === "tv" && tmdbId) {
+      if (seenTvTmdbIds.has(tmdbId)) continue
+      seenTvTmdbIds.add(tmdbId)
     }
 
-    const itemIdentifier = `req-${req.id}-tmdb-${tmdbId}`
-    const whitelisted = isItemWhitelisted(itemIdentifier)
-
-    let requesterAvatarUrl: string | undefined
-    if (matchedJellyfinUser) {
-      requesterAvatarUrl = jfAvatarMap.get(matchedJellyfinUser.Id)
-    } else if (reqBy?.avatar) {
-      requesterAvatarUrl = `/api/proxy/avatar?avatar=${encodeURIComponent(reqBy.avatar)}`
-    }
-
-    auditItems.push({
-      id: itemIdentifier,
-      requestId: req.id,
-      tmdbId,
-      imdbId,
-      jellyfinItemId: jellyfinItem?.Id,
-      title,
-      year,
-      mediaType,
-      posterPath,
-      overview,
-      genres,
-      quality,
-      qualityFull,
-      jellyfinImageTag,
-      sizeBytes,
-      externalLinks,
-      requestedAt,
-      requester: {
-        id: req.requestedBy?.id || 0,
-        username: requesterUsername,
-        avatar: req.requestedBy?.avatar,
-        requesterAvatarUrl,
-        matchedJellyfinUserId: matchedJellyfinUser?.Id,
-      },
-      requesterState,
-      householdStates,
-      daysSinceLastPlayed: daysSincePlayed,
-      conflictStatus,
-      conflictReason,
-      isWhitelisted: whitelisted,
-    })
+    auditItems.push(
+      resolveAuditItem({
+        jellyfinItem: item,
+        tmdbId,
+        mediaType,
+        requestedAt: item.DateCreated || "",
+        requestId: 0,
+        itemIdentifier: `unreq-${item.Id}-tmdb-${tmdbId}`,
+        requesterUsername: "",
+        isUnrequested: true,
+      })
+    )
   }
 
   const safeCount = auditItems.filter((i) => i.conflictStatus === "safe").length

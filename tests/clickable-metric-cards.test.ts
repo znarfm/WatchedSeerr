@@ -274,6 +274,40 @@ describe("Clickable Metric Cards & Table UX Seam", () => {
       undefined,
       "Bob Avatar does NOT have AvatarImage element"
     )
+
+    // Unrequested item has empty username and returns placeholder
+    const cellUnrequested = (
+      reqCol.cell as (props: {
+        row: { original: AuditMediaItem }
+      }) => React.ReactElement<{ children: string }>
+    )({
+      row: {
+        original: {
+          ...mockItems[0],
+          requester: { id: 0, username: "" },
+        },
+      },
+    })
+    assert.equal(cellUnrequested.props.children, "—")
+
+    // requester column filterFn filters 'unrequested'
+    const filterFn = reqCol.filterFn as (
+      row: { getValue: (id: string) => string },
+      colId: string,
+      filterValue: string
+    ) => boolean
+    assert.equal(
+      filterFn({ getValue: () => "" }, "requester", "unrequested"),
+      true
+    )
+    assert.equal(
+      filterFn({ getValue: () => "alice" }, "requester", "unrequested"),
+      false
+    )
+    assert.equal(
+      filterFn({ getValue: () => "alice" }, "requester", "alice"),
+      true
+    )
   })
 
   it("renders DataTable SSR markup with 5 clickable metric card buttons, toolbar filters, Kbd hints, and responsive columns", () => {

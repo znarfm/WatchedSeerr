@@ -56,7 +56,7 @@ import {
   getSeriesEpisodesAction,
   refreshAuditAction,
 } from "@/lib/actions"
-import { isDeleteDisabled } from "@/lib/utils"
+import { isDeleteDisabled, buildEpisodeSubRows } from "@/lib/utils"
 import type { AuditMediaItem, ConflictStatus } from "@/types"
 import { cn } from "cn"
 import {
@@ -219,9 +219,13 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
   const metricCounts = React.useMemo(() => computeMetricCounts(data), [data])
 
   const uniqueRequesters = React.useMemo(() => {
-    return Array.from(new Set(data.map((d) => d.requester.username))).sort(
-      (a, b) => a.localeCompare(b)
-    )
+    return Array.from(
+      new Set(data.map((d) => d.requester.username).filter(Boolean))
+    ).sort((a, b) => a.localeCompare(b))
+  }, [data])
+
+  const hasUnrequested = React.useMemo(() => {
+    return data.some((d) => !d.requester.username)
   }, [data])
 
   const handleToggleWhitelist = (item: AuditMediaItem) => {
@@ -291,52 +295,38 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
       const res = await getSeriesEpisodesAction(
         item.jellyfinItemId,
         item.tmdbId,
-        item.requester.matchedJellyfinUserId
+        item.requester.matchedJellyfinUserId,
+        item.householdStates,
+        item.requester.username
       )
 
       if (res.success && res.episodes) {
-        const episodeSubRows: AuditMediaItem[] = res.episodes.map((ep) => {
-          const sNum = String(ep.seasonNumber).padStart(2, "0")
-          const eNum = String(ep.episodeNumber).padStart(2, "0")
-          return {
-            id: ep.id,
-            requestId: item.requestId,
-            tmdbId: item.tmdbId,
-            jellyfinItemId: ep.episodeId,
-            title: `S${sNum}E${eNum}: ${ep.name}`,
-            mediaType: "tv" as const,
-            requestedAt: item.requestedAt,
-            requester: item.requester,
-            requesterState: {
-              userId: item.requesterState.userId,
-              username: item.requesterState.username,
-              isRequester: true,
-              status: ep.status,
-              progressPercent: ep.progressPercent,
-              lastPlayedDate: ep.lastPlayedDate,
-              playCount: ep.status === "completed" ? 1 : 0,
-            },
-            householdStates: [],
-            daysSinceLastPlayed: null,
-            conflictStatus:
-              ep.status === "in_progress"
-                ? "conflict"
-                : ep.status === "completed"
-                  ? "safe"
-                  : "ghost",
-            conflictReason: `Episode status: ${ep.status}`,
-            isWhitelisted: item.isWhitelisted,
-            episodes: [ep],
-            sizeBytes: ep.sizeBytes,
-            quality: ep.quality,
-            qualityFull: ep.qualityFull,
-          }
-        })
+        const {
+          subRows: episodeSubRows,
+          seriesDaysSinceLastPlayed,
+          requesterLastPlayedDate,
+          householdLastPlayedDates,
+        } = buildEpisodeSubRows(item, res.episodes)
 
         setData((prev) =>
           prev.map((i) =>
             i.id === item.id
-              ? { ...i, episodes: res.episodes, subRows: episodeSubRows }
+              ? {
+                  ...i,
+                  episodes: res.episodes,
+                  subRows: episodeSubRows,
+                  daysSinceLastPlayed: seriesDaysSinceLastPlayed,
+                  requesterState: {
+                    ...i.requesterState,
+                    lastPlayedDate:
+                      requesterLastPlayedDate || i.requesterState.lastPlayedDate,
+                  },
+                  householdStates: i.householdStates.map((h) => ({
+                    ...h,
+                    lastPlayedDate:
+                      householdLastPlayedDates.get(h.userId) || h.lastPlayedDate,
+                  })),
+                }
               : i
           )
         )
@@ -687,13 +677,22 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
                             <IconUser className="size-3.5 shrink-0 text-muted-foreground" />
                             <SelectValue placeholder="All Requesters">
                               {(val) =>
-                                !val || val === "all" ? "All Requesters" : val
+                                !val || val === "all"
+                                  ? "All Requesters"
+                                  : val === "unrequested"
+                                    ? "Unrequested"
+                                    : val
                               }
                             </SelectValue>
                           </div>
                         </SelectTrigger>
                         <SelectContent alignItemWithTrigger={false}>
                           <SelectItem value="all">All Requesters</SelectItem>
+                          {hasUnrequested && (
+                            <SelectItem value="unrequested">
+                              Unrequested
+                            </SelectItem>
+                          )}
                           {uniqueRequesters.map((user) => (
                             <SelectItem key={user} value={user}>
                               {user}
@@ -878,13 +877,20 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
                     <IconUser className="size-3.5 shrink-0 text-muted-foreground" />
                     <SelectValue placeholder="All Requesters">
                       {(val) =>
-                        !val || val === "all" ? "All Requesters" : val
+                        !val || val === "all"
+                          ? "All Requesters"
+                          : val === "unrequested"
+                            ? "Unrequested"
+                            : val
                       }
                     </SelectValue>
                   </div>
                 </SelectTrigger>
                 <SelectContent alignItemWithTrigger={false}>
                   <SelectItem value="all">All Requesters</SelectItem>
+                  {hasUnrequested && (
+                    <SelectItem value="unrequested">Unrequested</SelectItem>
+                  )}
                   {uniqueRequesters.map((user) => (
                     <SelectItem key={user} value={user}>
                       {user}

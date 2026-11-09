@@ -25,10 +25,20 @@ import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "@/components/ui/toast"
-import { toggleWhitelistAction, deleteMediaAction } from "@/lib/actions"
+import {
+  toggleWhitelistAction,
+  deleteMediaAction,
+  getSeriesEpisodesAction,
+} from "@/lib/actions"
 import type { AuditMediaItem, MediaExternalLinks } from "@/types"
 import { IconExternalLink } from "@tabler/icons-react"
-import { cn, formatMediaSize, isDeleteDisabled } from "@/lib/utils"
+import {
+  cn,
+  formatMediaSize,
+  isDeleteDisabled,
+  buildEpisodeSubRows,
+  calculateDaysAgo,
+} from "@/lib/utils"
 
 export interface DeleteTarget {
   item: AuditMediaItem
@@ -98,10 +108,65 @@ export function MediaDetailSheetBody({
     ? new Date(selectedItem.requestedAt).toLocaleDateString()
     : "—"
 
-  const formattedInactive =
+  const subRows = selectedItem.subRows
+
+  const getLatestLastPlayedFromSubRows = (
+    userId?: string,
+    isRequester = false
+  ): string | undefined => {
+    if (!subRows || subRows.length === 0) return undefined
+    let latest: string | undefined
+    for (const sub of subRows) {
+      const state = isRequester
+        ? sub.requesterState
+        : sub.householdStates.find((h) => h.userId === userId)
+      const d = state?.lastPlayedDate
+      if (d && (!latest || new Date(d) > new Date(latest))) {
+        latest = d
+      }
+    }
+    return latest
+  }
+
+  const getLatestAcrossAllSubRows = (): string | undefined => {
+    if (!subRows || subRows.length === 0) return undefined
+    let latest: string | undefined
+    for (const sub of subRows) {
+      if (
+        sub.requesterState?.lastPlayedDate &&
+        (!latest ||
+          new Date(sub.requesterState.lastPlayedDate) > new Date(latest))
+      ) {
+        latest = sub.requesterState.lastPlayedDate
+      }
+      for (const h of sub.householdStates) {
+        if (
+          h.lastPlayedDate &&
+          (!latest || new Date(h.lastPlayedDate) > new Date(latest))
+        ) {
+          latest = h.lastPlayedDate
+        }
+      }
+    }
+    return latest
+  }
+
+  const requesterLastPlayedDate =
+    selectedItem.requesterState.lastPlayedDate ||
+    getLatestLastPlayedFromSubRows(
+      selectedItem.requester.matchedJellyfinUserId,
+      true
+    )
+
+  const effectiveInactiveDays =
     selectedItem.daysSinceLastPlayed !== null &&
     selectedItem.daysSinceLastPlayed !== undefined
-      ? `${selectedItem.daysSinceLastPlayed}d`
+      ? selectedItem.daysSinceLastPlayed
+      : calculateDaysAgo(getLatestAcrossAllSubRows())
+
+  const formattedInactive =
+    effectiveInactiveDays !== null && effectiveInactiveDays !== undefined
+      ? `${effectiveInactiveDays}d`
       : "Never"
 
   const statusBannerClass =
@@ -304,76 +369,86 @@ export function MediaDetailSheetBody({
             Household Playback Breakdown
           </h4>
           <div className="space-y-3">
-            <Card className="space-y-2 border border-primary/40 bg-muted/40 p-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="flex items-center gap-2 font-medium">
-                  <Avatar className="size-5 shrink-0">
-                    {selectedItem.requester.requesterAvatarUrl && (
-                      <AvatarImage
-                        src={selectedItem.requester.requesterAvatarUrl}
-                        alt={selectedItem.requester.username}
-                      />
-                    )}
-                    <AvatarFallback className="font-mono text-[10px] uppercase">
-                      {selectedItem.requester.username.slice(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                  {selectedItem.requester.username} (Requester)
-                </span>
-                <span className="font-mono text-xs">
-                  {selectedItem.requesterState.progressPercent}%
-                </span>
-              </div>
-              <Progress
-                value={selectedItem.requesterState.progressPercent}
-                className="h-1.5"
-              />
-              <div className="flex justify-between text-[11px] text-muted-foreground">
-                <span>Status: {selectedItem.requesterState.status}</span>
-                <span>
-                  Last played:{" "}
-                  {selectedItem.requesterState.lastPlayedDate
-                    ? new Date(
-                        selectedItem.requesterState.lastPlayedDate
-                      ).toLocaleDateString()
-                    : "Never"}
-                </span>
-              </div>
-            </Card>
-
-            {selectedItem.householdStates.map((user) => (
-              <Card
-                key={user.userId}
-                className="space-y-2 border border-border bg-muted/20 p-3"
-              >
+            {selectedItem.requester.username ? (
+              <Card className="space-y-2 border border-primary/40 bg-muted/40 p-3">
                 <div className="flex items-center justify-between text-xs">
                   <span className="flex items-center gap-2 font-medium">
                     <Avatar className="size-5 shrink-0">
-                      {user.avatarUrl && (
-                        <AvatarImage src={user.avatarUrl} alt={user.username} />
+                      {selectedItem.requester.requesterAvatarUrl && (
+                        <AvatarImage
+                          src={selectedItem.requester.requesterAvatarUrl}
+                          alt={selectedItem.requester.username}
+                        />
                       )}
                       <AvatarFallback className="font-mono text-[10px] uppercase">
-                        {user.username.slice(0, 2)}
+                        {selectedItem.requester.username.slice(0, 2)}
                       </AvatarFallback>
                     </Avatar>
-                    {user.username}
+                    {selectedItem.requester.username} (Requester)
                   </span>
                   <span className="font-mono text-xs">
-                    {user.progressPercent}%
+                    {selectedItem.requesterState.progressPercent}%
                   </span>
                 </div>
-                <Progress value={user.progressPercent} className="h-1.5" />
+                <Progress
+                  value={selectedItem.requesterState.progressPercent}
+                  className="h-1.5"
+                />
                 <div className="flex justify-between text-[11px] text-muted-foreground">
-                  <span>Status: {user.status}</span>
+                  <span>Status: {selectedItem.requesterState.status}</span>
                   <span>
                     Last played:{" "}
-                    {user.lastPlayedDate
-                      ? new Date(user.lastPlayedDate).toLocaleDateString()
+                    {requesterLastPlayedDate
+                      ? new Date(
+                          requesterLastPlayedDate
+                        ).toLocaleDateString()
                       : "Never"}
                   </span>
                 </div>
               </Card>
-            ))}
+            ) : null}
+
+            {selectedItem.householdStates.map((user) => {
+              const userLastPlayed =
+                user.lastPlayedDate ||
+                getLatestLastPlayedFromSubRows(user.userId, false)
+              return (
+                <Card
+                  key={user.userId}
+                  className="space-y-2 border border-border bg-muted/20 p-3"
+                >
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-2 font-medium">
+                      <Avatar className="size-5 shrink-0">
+                        {user.avatarUrl && (
+                          <AvatarImage
+                            src={user.avatarUrl}
+                            alt={user.username}
+                          />
+                        )}
+                        <AvatarFallback className="font-mono text-[10px] uppercase">
+                          {user.username.slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      {user.username}
+                    </span>
+                    <span className="font-mono text-xs">
+                      {user.progressPercent}%
+                    </span>
+                  </div>
+                  <Progress value={user.progressPercent} className="h-1.5" />
+                  <div className="flex justify-between text-[11px] text-muted-foreground">
+                    <span>Status: {user.status}</span>
+                    <span>
+                      Last played:{" "}
+                      {userLastPlayed
+                        ? new Date(userLastPlayed).toLocaleDateString()
+                        : "Never"}
+                    </span>
+                  </div>
+                </Card>
+              )
+            })}
           </div>
         </div>
       </div>
@@ -420,6 +495,58 @@ export function MediaDetailSheet({
 
   const candidate =
     deleteCandidate !== undefined ? deleteCandidate : internalCandidate
+
+  React.useEffect(() => {
+    if (
+      !selectedItem ||
+      selectedItem.mediaType !== "tv" ||
+      !selectedItem.jellyfinItemId ||
+      (selectedItem.subRows && selectedItem.subRows.length > 0)
+    ) {
+      return
+    }
+
+    const controller = new AbortController()
+
+    getSeriesEpisodesAction(
+      selectedItem.jellyfinItemId,
+      selectedItem.tmdbId,
+      selectedItem.requester.matchedJellyfinUserId,
+      selectedItem.householdStates,
+      selectedItem.requester.username
+    ).then((res) => {
+      if (controller.signal.aborted || !res.success || !res.episodes) return
+      const {
+        subRows,
+        seriesDaysSinceLastPlayed,
+        requesterLastPlayedDate,
+        householdLastPlayedDates,
+      } = buildEpisodeSubRows(selectedItem, res.episodes)
+
+      const updates: Partial<AuditMediaItem> = {
+        episodes: res.episodes,
+        subRows,
+        daysSinceLastPlayed: seriesDaysSinceLastPlayed,
+        requesterState: {
+          ...selectedItem.requesterState,
+          lastPlayedDate:
+            requesterLastPlayedDate ||
+            selectedItem.requesterState.lastPlayedDate,
+        },
+        householdStates: selectedItem.householdStates.map((h) => ({
+          ...h,
+          lastPlayedDate:
+            householdLastPlayedDates.get(h.userId) || h.lastPlayedDate,
+        })),
+      }
+
+      onItemUpdated?.(selectedItem.id, updates)
+    })
+
+    return () => {
+      controller.abort()
+    }
+  }, [selectedItem?.id])
 
   const setCandidate = (c: DeleteTarget | null) => {
     if (c) {

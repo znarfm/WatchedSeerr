@@ -352,6 +352,80 @@ describe("MediaDetailSheet Seam", () => {
         "Whitelist button remains when disableDelete is true"
       )
     })
+
+    it("derives latest last played date from subitems for series parent and renders household playback on subitem sheet", () => {
+      // 1. Parent series with subRows containing episode watch dates
+      const seriesWithEpisodes: AuditMediaItem = {
+        ...mockTvSeries,
+        requesterState: {
+          ...mockTvSeries.requesterState,
+          lastPlayedDate: undefined, // Series item itself has undefined in Jellyfin
+        },
+        householdStates: [
+          {
+            userId: "u-2",
+            username: "bob",
+            isRequester: false,
+            status: "in_progress",
+            progressPercent: 50,
+            playCount: 1,
+            lastPlayedDate: undefined,
+          },
+        ],
+        subRows: [
+          {
+            ...mockTvSeries,
+            id: "ep-1",
+            title: "S01E01: Pilot",
+            requesterState: {
+              ...mockTvSeries.requesterState,
+              lastPlayedDate: "2026-03-10T12:00:00Z",
+            },
+            householdStates: [
+              {
+                userId: "u-2",
+                username: "bob",
+                isRequester: false,
+                status: "completed",
+                progressPercent: 100,
+                playCount: 1,
+                lastPlayedDate: "2026-03-12T15:30:00Z",
+              },
+            ],
+          },
+        ],
+      }
+
+      const parentHtml = renderBody({ selectedItem: seriesWithEpisodes })
+      assert.ok(
+        !parentHtml.includes("Last played: Never"),
+        "Parent entry does NOT show Never when subitems have playback"
+      )
+      assert.ok(
+        parentHtml.includes(new Date("2026-03-10T12:00:00Z").toLocaleDateString()),
+        "Parent requester card shows latest date from subitem"
+      )
+      assert.ok(
+        parentHtml.includes(new Date("2026-03-12T15:30:00Z").toLocaleDateString()),
+        "Parent household card shows latest date from subitem"
+      )
+
+      // 2. Subitem sheet renders both requester and household progress
+      const subItem: AuditMediaItem = seriesWithEpisodes.subRows![0]
+      const subItemHtml = renderBody({ selectedItem: subItem })
+      assert.ok(
+        subItemHtml.includes("dave (Requester)"),
+        "Subitem shows requester progress"
+      )
+      assert.ok(
+        subItemHtml.includes("bob"),
+        "Subitem shows household member bob"
+      )
+      assert.ok(
+        subItemHtml.includes("100%"),
+        "Subitem shows bob 100% progress"
+      )
+    })
   })
 })
 

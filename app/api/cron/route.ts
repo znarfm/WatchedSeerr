@@ -39,7 +39,14 @@ export async function POST(request: Request) {
           value:
             ghostRequests.length > 0
               ? ghostRequests
-                  .map((i) => `• **${i.title}** (Req: ${i.requester.username})`)
+                  .map(
+                    (i) =>
+                      `• **${i.title}**${
+                        i.requester.username
+                          ? ` (Req: ${i.requester.username})`
+                          : ""
+                      }`
+                  )
                   .slice(0, 10)
                   .join("\n")
               : "None",

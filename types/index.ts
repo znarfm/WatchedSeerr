@@ -77,6 +77,7 @@ export interface JellyfinItem {
   ServerId?: string
   RunTimeTicks?: number
   ProductionYear?: number
+  DateCreated?: string
   IndexNumber?: number
   ParentIndexNumber?: number
   Type: "Movie" | "Series" | "Season" | "Episode"
@@ -178,6 +179,8 @@ export interface AuditEpisodeItem {
   sizeBytes?: number
   quality?: string
   qualityFull?: string
+  householdStates?: UserPlaybackState[]
+  requesterState?: UserPlaybackState
 }
 
 export interface AuditMediaItem {

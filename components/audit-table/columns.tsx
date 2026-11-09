@@ -256,22 +256,33 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
     accessorFn: (row) => row.requester.username,
     meta: { className: "w-36" },
     header: ({ column }) => <SortHeader column={column} title="Requester" />,
-    filterFn: "equalsString",
+    filterFn: (row, columnId, filterValue) => {
+      if (!filterValue || filterValue === "all") return true
+      const username = row.getValue<string>(columnId)
+      if (filterValue === "unrequested") {
+        return !username
+      }
+      return username === filterValue
+    },
     cell: ({ row }) => {
       const item = row.original
+      const username = item.requester.username
+      if (!username) {
+        return <span className="text-muted-foreground">—</span>
+      }
       const avatarSrc = item.requester.requesterAvatarUrl
 
       return (
         <div className="flex items-center gap-2">
           <Avatar className="size-5 shrink-0">
             {avatarSrc && (
-              <AvatarImage src={avatarSrc} alt={item.requester.username} />
+              <AvatarImage src={avatarSrc} alt={username} />
             )}
             <AvatarFallback className="font-mono text-[10px] uppercase">
-              {item.requester.username.slice(0, 2)}
+              {username.slice(0, 2)}
             </AvatarFallback>
           </Avatar>
-          <span className="truncate">{item.requester.username}</span>
+          <span className="truncate">{username}</span>
         </div>
       )
     },
@@ -288,6 +299,9 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
       return row.original.requesterState.status === filterValue
     },
     cell: ({ row }) => {
+      if (!row.original.requester.username) {
+        return <span className="text-muted-foreground">—</span>
+      }
       const state = row.original.requesterState
       return (
         <div className="space-y-1">

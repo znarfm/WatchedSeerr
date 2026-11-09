@@ -105,14 +105,16 @@ export function deriveMatrixUsers(items: AuditMediaItem[]): MatrixUserColumn[] {
   }
 
   for (const item of items) {
-    const reqEntry = ensureUser(
-      item.requester.matchedJellyfinUserId || item.requesterState.userId,
-      item.requester.username,
-      item.requester.requesterAvatarUrl || item.requesterState.avatarUrl
-    )
-    reqEntry.requestedCount++
-    if (item.requesterState.status === "completed") {
-      reqEntry.watchedCount++
+    if (item.requester.username) {
+      const reqEntry = ensureUser(
+        item.requester.matchedJellyfinUserId || item.requesterState.userId,
+        item.requester.username,
+        item.requester.requesterAvatarUrl || item.requesterState.avatarUrl
+      )
+      reqEntry.requestedCount++
+      if (item.requesterState.status === "completed") {
+        reqEntry.watchedCount++
+      }
     }
 
     for (const h of item.householdStates) {
@@ -138,8 +140,9 @@ export function getUserCellState(
     ""
   ).toLowerCase()
   const isRequester =
-    (!!col.userId && reqId === col.userId.toLowerCase()) ||
-    item.requester.username.toLowerCase() === col.username.toLowerCase()
+    !!item.requester.username &&
+    (((!!col.userId && reqId === col.userId.toLowerCase()) ||
+      item.requester.username.toLowerCase() === col.username.toLowerCase()))
 
   if (isRequester) {
     return { state: item.requesterState, isRequester: true }
@@ -247,6 +250,10 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
     return Array.from(set).sort((a, b) => a.localeCompare(b))
   }, [data])
 
+  const hasUnrequested = React.useMemo(() => {
+    return data.some((item) => !item.requester?.username)
+  }, [data])
+
   // Reset all filters
   const isFiltered =
     search !== "" ||
@@ -277,11 +284,14 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
       if (mediaTypeFilter !== "all" && item.mediaType !== mediaTypeFilter) {
         return false
       }
-      if (
-        requesterFilter !== "all" &&
-        item.requester.username.toLowerCase() !== requesterFilter.toLowerCase()
-      ) {
-        return false
+      if (requesterFilter !== "all") {
+        if (requesterFilter === "unrequested") {
+          if (item.requester.username) return false
+        } else if (
+          item.requester.username.toLowerCase() !== requesterFilter.toLowerCase()
+        ) {
+          return false
+        }
       }
       if (statusFilter !== "all" && item.conflictStatus !== statusFilter) {
         return false
@@ -487,13 +497,22 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
                             <IconUser className="size-3.5 shrink-0 text-muted-foreground" />
                             <SelectValue placeholder="All Requesters">
                               {(val: string | null) =>
-                                val === "all" || !val ? "All Requesters" : val
+                                val === "all" || !val
+                                  ? "All Requesters"
+                                  : val === "unrequested"
+                                    ? "Unrequested"
+                                    : val
                               }
                             </SelectValue>
                           </div>
                         </SelectTrigger>
                         <SelectContent alignItemWithTrigger={false}>
                           <SelectItem value="all">All Requesters</SelectItem>
+                          {hasUnrequested && (
+                            <SelectItem value="unrequested">
+                              Unrequested
+                            </SelectItem>
+                          )}
                           {uniqueRequesters.map((u) => (
                             <SelectItem key={u} value={u}>
                               {u}
@@ -639,13 +658,20 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
                     <IconUser className="size-3.5 shrink-0 text-muted-foreground" />
                     <SelectValue placeholder="All Requesters">
                       {(val: string | null) =>
-                        val === "all" || !val ? "All Requesters" : val
+                        val === "all" || !val
+                          ? "All Requesters"
+                          : val === "unrequested"
+                            ? "Unrequested"
+                            : val
                       }
                     </SelectValue>
                   </div>
                 </SelectTrigger>
                 <SelectContent alignItemWithTrigger={false}>
                   <SelectItem value="all">All Requesters</SelectItem>
+                  {hasUnrequested && (
+                    <SelectItem value="unrequested">Unrequested</SelectItem>
+                  )}
                   {uniqueRequesters.map((u) => (
                     <SelectItem key={u} value={u}>
                       {u}
@@ -890,10 +916,14 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
                           </div>
                           <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground uppercase">
                             <span>{item.mediaType}</span>
-                            <span className="hidden sm:inline">•</span>
-                            <span className="hidden sm:inline">
-                              Req: {item.requester.username}
-                            </span>
+                            {item.requester.username && (
+                              <>
+                                <span className="hidden sm:inline">•</span>
+                                <span className="hidden sm:inline">
+                                  Req: {item.requester.username}
+                                </span>
+                              </>
+                            )}
                           </div>
                           <div className="mt-1 flex flex-wrap items-center gap-1">
                             {item.isWhitelisted && (

@@ -118,6 +118,65 @@ describe("Jellyfin Filter & TV Hierarchy Seam", () => {
     assert.equal(report.items[1].title, "Game of Thrones")
   })
 
+  it("lists unrequested library items downloaded directly with empty requester", async () => {
+    const mockRequests: SeerrRequest[] = [
+      {
+        id: 1,
+        status: 2,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        requestedBy: { id: 10, username: "alice" },
+        is4k: false,
+        media: {
+          id: 101,
+          tmdbId: 550,
+          status: 5,
+          mediaType: "movie",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    ]
+
+    const mockLibraryItems: JellyfinItem[] = [
+      {
+        Id: "jf-movie-550",
+        Name: "Fight Club",
+        Type: "Movie",
+        ProviderIds: { Tmdb: "550" },
+      },
+      {
+        Id: "jf-movie-680",
+        Name: "Pulp Fiction",
+        Type: "Movie",
+        ProviderIds: { Tmdb: "680" },
+      },
+    ]
+
+    const mockSeerrClient = {
+      getRequests: async () => mockRequests,
+      getMediaDetails: async () => ({ id: 550, title: "Fight Club" }),
+    } as unknown as SeerrClient
+
+    const mockJellyfinClient = {
+      getUsers: async () => [{ Id: "u-alice", Name: "alice" }],
+      getAllLibraryItems: async () => mockLibraryItems,
+      getAllUserItems: async () => [],
+    } as unknown as JellyfinClient
+
+    const report = await auditMedia({
+      seerrClient: mockSeerrClient,
+      jellyfinClient: mockJellyfinClient,
+    })
+
+    assert.equal(report.items.length, 2)
+    const unrequestedItem = report.items.find((i) => i.tmdbId === 680)
+    assert.ok(unrequestedItem, "Unrequested movie is included")
+    assert.equal(unrequestedItem.title, "Pulp Fiction")
+    assert.equal(unrequestedItem.requester.username, "")
+    assert.equal(unrequestedItem.requestId, 0)
+  })
+
   it("deleteMediaAction handles single episode target", async () => {
     let capturedUrl = ""
     let capturedMethod = ""

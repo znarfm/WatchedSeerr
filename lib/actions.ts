@@ -9,9 +9,17 @@ import {
 import { RadarrClient } from "@/lib/clients/radarr"
 import { SonarrClient } from "@/lib/clients/sonarr"
 import { JellyfinClient } from "@/lib/clients/jellyfin"
+import { SeerrClient } from "@/lib/clients/seerr"
 import { invalidateAuditCache, normalizeVideoQuality } from "@/lib/audit"
 import { isDeleteDisabled } from "@/lib/utils"
-import type { AuditEpisodeItem, WatchStatus } from "@/types"
+import type {
+  AuditEpisodeItem,
+  JellyfinItem,
+  JellyfinUser,
+  SeerrUser,
+  UserPlaybackState,
+  WatchStatus,
+} from "@/types"
 
 export async function refreshAuditAction() {
   invalidateAuditCache()
@@ -48,7 +56,9 @@ export async function toggleWhitelistAction(
 export async function getSeriesEpisodesAction(
   jellyfinItemId: string,
   seriesTmdbId: number,
-  userId?: string
+  userId?: string,
+  householdUsers?: { userId: string; username: string; avatarUrl?: string }[],
+  requesterUsername?: string
 ) {
   try {
     const jellyfin = new JellyfinClient()
@@ -60,6 +70,20 @@ export async function getSeriesEpisodesAction(
         ? sonarr.getSeriesByTmdbId(seriesTmdbId)
         : Promise.resolve(null),
     ])
+
+    const otherUsers = (householdUsers || []).filter(
+      (u) => u.userId && u.userId !== userId
+    )
+    const otherUserEpisodes = await Promise.all(
+      otherUsers.map(async (u) => {
+        try {
+          const items = await jellyfin.getEpisodes(jellyfinItemId, u.userId)
+          return { user: u, items: Array.isArray(items) ? items : [] }
+        } catch {
+          return { user: u, items: [] as JellyfinItem[] }
+        }
+      })
+    )
 
     let sonarrFiles: {
       id: number
@@ -95,6 +119,52 @@ export async function getSeriesEpisodesAction(
         return epPattern.test(f.relativePath)
       })
 
+      const requesterState: UserPlaybackState = {
+        userId: userId || "",
+        username: requesterUsername || "",
+        isRequester: true,
+        status,
+        progressPercent,
+        lastPlayedDate:
+          status === "unplayed" ? undefined : userData?.LastPlayedDate,
+        playCount: status === "completed" ? 1 : userData?.PlayCount || 0,
+      }
+
+      const householdStates: UserPlaybackState[] = otherUserEpisodes.map(
+        ({ user, items }) => {
+          const userEp = items.find((i) => i.Id === ep.Id)
+          const uData = userEp?.UserData
+          let uStatus: WatchStatus = "unplayed"
+          let uProgressPercent = 0
+          if (uData?.Played) {
+            uStatus = "completed"
+            uProgressPercent = 100
+          } else if (
+            uData?.PlaybackPositionTicks &&
+            (userEp?.RunTimeTicks || ep.RunTimeTicks)
+          ) {
+            const ticks = userEp?.RunTimeTicks || ep.RunTimeTicks || 1
+            uProgressPercent = Math.min(
+              99,
+              Math.round((uData.PlaybackPositionTicks / ticks) * 100)
+            )
+            uStatus = uProgressPercent > 90 ? "completed" : "in_progress"
+          }
+
+          return {
+            userId: user.userId,
+            username: user.username,
+            avatarUrl: user.avatarUrl,
+            isRequester: false,
+            status: uStatus,
+            progressPercent: uProgressPercent,
+            lastPlayedDate:
+              uStatus === "unplayed" ? undefined : uData?.LastPlayedDate,
+            playCount: uStatus === "completed" ? 1 : uData?.PlayCount || 0,
+          }
+        }
+      )
+
       return {
         id: `ep-${ep.Id}`,
         episodeId: ep.Id,
@@ -113,6 +183,8 @@ export async function getSeriesEpisodesAction(
             (s) => s.Type === "Video"
           )
         ),
+        householdStates,
+        requesterState,
       }
     })
 
