@@ -260,4 +260,36 @@ describe("Jellyfin Filter & TV Hierarchy Seam", () => {
       }
     }
   })
+
+  it("deleteMediaAction rejects single_episode target when episodeFileId is missing", async () => {
+    const res = await deleteMediaAction({
+      id: "ep-123",
+      tmdbId: 1396,
+      mediaType: "tv",
+      target: "single_episode",
+    })
+    assert.equal(res.success, false)
+  })
+
+  it("deleteMediaAction rejects watched_episodes target when episodeFileIds is missing or empty", async () => {
+    const res = await deleteMediaAction({
+      id: "ep-123",
+      tmdbId: 1396,
+      mediaType: "tv",
+      target: "watched_episodes",
+      episodeFileIds: [],
+    })
+    assert.equal(res.success, false)
+  })
+
+  it("deleteMediaAction rejects episode targets when mediaType is movie", async () => {
+    const res = await deleteMediaAction({
+      id: "mov-123",
+      tmdbId: 550,
+      mediaType: "movie",
+      target: "single_episode",
+      episodeFileId: 10,
+    })
+    assert.equal(res.success, false)
+  })
 })

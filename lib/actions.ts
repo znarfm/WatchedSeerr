@@ -5,30 +5,68 @@ import { toggleWhitelistItem } from "@/lib/whitelist"
 import {
   toggleWhitelistSchema,
   deleteActionSchema,
+  getSeriesEpisodesSchema,
+  type GetSeriesEpisodesInput,
 } from "@/lib/validation/actions"
 import { RadarrClient } from "@/lib/clients/radarr"
 import { SonarrClient } from "@/lib/clients/sonarr"
 import { JellyfinClient } from "@/lib/clients/jellyfin"
-import { SeerrClient } from "@/lib/clients/seerr"
 import { invalidateAuditCache, normalizeVideoQuality } from "@/lib/audit"
 import { isDeleteDisabled } from "@/lib/utils"
 import type {
   AuditEpisodeItem,
   JellyfinItem,
-  JellyfinUser,
-  SeerrUser,
   UserPlaybackState,
   WatchStatus,
 } from "@/types"
 
-export async function refreshAuditAction() {
+const EPISODE_CACHE_TTL_MS = 60_000
+const MAX_EPISODE_CACHE_SIZE = 200
+const episodeCache = new Map<
+  string,
+  { data: AuditEpisodeItem[]; expiresAt: number }
+>()
+
+function clearEpisodeCache() {
+  episodeCache.clear()
+}
+
+export async function invalidateEpisodeCache() {
+  clearEpisodeCache()
+}
+
+function revalidateAuditViews() {
   invalidateAuditCache()
+  clearEpisodeCache()
   try {
     revalidatePath("/")
     revalidatePath("/matrix")
   } catch {
     // Outside Next.js request context (e.g. tests)
   }
+}
+
+function resolvePlaybackProgress(
+  userData?: JellyfinItem["UserData"],
+  runTimeTicks?: number
+): { status: WatchStatus; progressPercent: number } {
+  let status: WatchStatus = "unplayed"
+  let progressPercent = 0
+  if (userData?.Played) {
+    status = "completed"
+    progressPercent = 100
+  } else if (userData?.PlaybackPositionTicks && runTimeTicks) {
+    progressPercent = Math.min(
+      99,
+      Math.round((userData.PlaybackPositionTicks / runTimeTicks) * 100)
+    )
+    status = progressPercent > 90 ? "completed" : "in_progress"
+  }
+  return { status, progressPercent }
+}
+
+export async function refreshAuditAction() {
+  revalidateAuditViews()
   return { success: true }
 }
 
@@ -43,36 +81,72 @@ export async function toggleWhitelistAction(
   }
 
   const isWhitelisted = toggleWhitelistItem(parsed.data)
-  invalidateAuditCache()
-  try {
-    revalidatePath("/")
-    revalidatePath("/matrix")
-  } catch {
-    // Outside Next.js request context (e.g. tests)
-  }
+  revalidateAuditViews()
   return { success: true, isWhitelisted }
 }
 
 export async function getSeriesEpisodesAction(
-  jellyfinItemId: string,
-  seriesTmdbId: number,
+  jellyfinItemIdOrInput: string | GetSeriesEpisodesInput,
+  seriesTmdbId?: number,
   userId?: string,
   householdUsers?: { userId: string; username: string; avatarUrl?: string }[],
   requesterUsername?: string
 ) {
   try {
+    const input =
+      typeof jellyfinItemIdOrInput === "object" && jellyfinItemIdOrInput !== null
+        ? jellyfinItemIdOrInput
+        : {
+            jellyfinItemId: jellyfinItemIdOrInput,
+            seriesTmdbId: seriesTmdbId!,
+            userId,
+            householdUsers,
+            requesterUsername,
+          }
+
+    const parsed = getSeriesEpisodesSchema.safeParse(input)
+    if (!parsed.success) {
+      return {
+        success: false,
+        episodes: [] as AuditEpisodeItem[],
+        error: parsed.error.format(),
+      }
+    }
+
+    const {
+      jellyfinItemId,
+      seriesTmdbId: parsedTmdbId,
+      userId: parsedUserId,
+      householdUsers: parsedHouseholdUsers,
+      requesterUsername: parsedRequesterUsername,
+    } = parsed.data
+
+    const cacheKey = `${jellyfinItemId}:${parsedUserId || "none"}:${(parsedHouseholdUsers || [])
+      .map((u) => u.userId)
+      .sort()
+      .join(",")}`
+
+    const cached = episodeCache.get(cacheKey)
+    if (cached && Date.now() < cached.expiresAt) {
+      return { success: true, episodes: cached.data }
+    }
+
     const jellyfin = new JellyfinClient()
     const sonarr = new SonarrClient()
 
     const [jellyfinEpisodes, sonarrSeries] = await Promise.all([
-      jellyfin.getEpisodes(jellyfinItemId, userId),
+      jellyfin.getEpisodes(jellyfinItemId, parsedUserId),
       sonarr.isConfigured()
-        ? sonarr.getSeriesByTmdbId(seriesTmdbId)
+        ? sonarr.getSeriesByTmdbId(parsedTmdbId)
         : Promise.resolve(null),
     ])
 
-    const otherUsers = (householdUsers || []).filter(
-      (u) => u.userId && u.userId !== userId
+    const otherUsers = Array.from(
+      new Map(
+        (parsedHouseholdUsers || [])
+          .filter((u) => u.userId && u.userId !== parsedUserId)
+          .map((u) => [u.userId, u])
+      ).values()
     )
     const otherUserEpisodes = await Promise.all(
       otherUsers.map(async (u) => {
@@ -85,6 +159,11 @@ export async function getSeriesEpisodesAction(
       })
     )
 
+    const userEpisodeMaps = otherUserEpisodes.map(({ user, items }) => ({
+      user,
+      map: new Map(items.map((i) => [i.Id, i])),
+    }))
+
     let sonarrFiles: {
       id: number
       seasonNumber: number
@@ -94,34 +173,41 @@ export async function getSeriesEpisodesAction(
       sonarrFiles = await sonarr.getEpisodeFiles(sonarrSeries.id)
     }
 
+    const sonarrFilesBySeason = new Map<
+      number,
+      { id: number; seasonNumber: number; relativePath: string }[]
+    >()
+    for (const f of sonarrFiles) {
+      let list = sonarrFilesBySeason.get(f.seasonNumber)
+      if (!list) {
+        list = []
+        sonarrFilesBySeason.set(f.seasonNumber, list)
+      }
+      list.push(f)
+    }
+
     const episodes: AuditEpisodeItem[] = jellyfinEpisodes.map((ep) => {
       const seasonNumber = ep.ParentIndexNumber ?? 1
       const episodeNumber = ep.IndexNumber ?? 0
       const userData = ep.UserData
 
-      let status: WatchStatus = "unplayed"
-      let progressPercent = 0
-      if (userData?.Played) {
-        status = "completed"
-        progressPercent = 100
-      } else if (userData?.PlaybackPositionTicks && ep.RunTimeTicks) {
-        progressPercent = Math.min(
-          99,
-          Math.round((userData.PlaybackPositionTicks / ep.RunTimeTicks) * 100)
+      const { status, progressPercent } = resolvePlaybackProgress(
+        userData,
+        ep.RunTimeTicks
+      )
+
+      const seasonFiles = sonarrFilesBySeason.get(seasonNumber)
+      let matchedSonarrFile: { id: number } | undefined
+      if (seasonFiles) {
+        const epPattern = new RegExp(`E0*${episodeNumber}\\b`, "i")
+        matchedSonarrFile = seasonFiles.find((f) =>
+          epPattern.test(f.relativePath)
         )
-        status = progressPercent > 90 ? "completed" : "in_progress"
       }
 
-      // Try matching Sonarr episode file by season & episode pattern in relativePath or seasonNumber
-      const matchedSonarrFile = sonarrFiles.find((f) => {
-        if (f.seasonNumber !== seasonNumber) return false
-        const epPattern = new RegExp(`E0*${episodeNumber}\\b`, "i")
-        return epPattern.test(f.relativePath)
-      })
-
       const requesterState: UserPlaybackState = {
-        userId: userId || "",
-        username: requesterUsername || "",
+        userId: parsedUserId || "",
+        username: parsedRequesterUsername || "",
         isRequester: true,
         status,
         progressPercent,
@@ -130,26 +216,15 @@ export async function getSeriesEpisodesAction(
         playCount: status === "completed" ? 1 : userData?.PlayCount || 0,
       }
 
-      const householdStates: UserPlaybackState[] = otherUserEpisodes.map(
-        ({ user, items }) => {
-          const userEp = items.find((i) => i.Id === ep.Id)
+      const householdStates: UserPlaybackState[] = userEpisodeMaps.map(
+        ({ user, map }) => {
+          const userEp = map.get(ep.Id)
           const uData = userEp?.UserData
-          let uStatus: WatchStatus = "unplayed"
-          let uProgressPercent = 0
-          if (uData?.Played) {
-            uStatus = "completed"
-            uProgressPercent = 100
-          } else if (
-            uData?.PlaybackPositionTicks &&
-            (userEp?.RunTimeTicks || ep.RunTimeTicks)
-          ) {
-            const ticks = userEp?.RunTimeTicks || ep.RunTimeTicks || 1
-            uProgressPercent = Math.min(
-              99,
-              Math.round((uData.PlaybackPositionTicks / ticks) * 100)
+          const { status: uStatus, progressPercent: uProgressPercent } =
+            resolvePlaybackProgress(
+              uData,
+              userEp?.RunTimeTicks || ep.RunTimeTicks
             )
-            uStatus = uProgressPercent > 90 ? "completed" : "in_progress"
-          }
 
           return {
             userId: user.userId,
@@ -193,6 +268,15 @@ export async function getSeriesEpisodesAction(
       (a, b) =>
         a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber
     )
+
+    if (episodeCache.size >= MAX_EPISODE_CACHE_SIZE) {
+      clearEpisodeCache()
+    }
+
+    episodeCache.set(cacheKey, {
+      data: episodes,
+      expiresAt: Date.now() + EPISODE_CACHE_TTL_MS,
+    })
 
     return { success: true, episodes }
   } catch (error) {
@@ -256,18 +340,29 @@ export async function deleteMediaAction(input: unknown) {
         : await sonarr.getSeriesByTmdbId(tmdbId)
 
       if (series) {
-        if (target === "single_episode" && episodeFileId) {
+        if (target === "single_episode") {
+          if (!episodeFileId) {
+            return {
+              success: false,
+              error: "episodeFileId is required for single_episode target",
+            }
+          }
           await sonarr.deleteEpisodeFile(episodeFileId)
           details = `Deleted episode file ${episodeFileId} from Sonarr series: ${series.title}`
-        } else if (
-          target === "watched_episodes" &&
-          episodeFileIds &&
-          episodeFileIds.length > 0
-        ) {
-          await Promise.all(
-            episodeFileIds.map((epId) => sonarr.deleteEpisodeFile(epId))
-          )
-          details = `Deleted ${episodeFileIds.length} episodes from Sonarr series: ${series.title}`
+        } else if (target === "watched_episodes") {
+          const uniqueFileIds = [...new Set(episodeFileIds || [])]
+          if (uniqueFileIds.length === 0) {
+            return {
+              success: false,
+              error: "episodeFileIds array is required for watched_episodes target",
+            }
+          }
+          const BATCH_SIZE = 8
+          for (let i = 0; i < uniqueFileIds.length; i += BATCH_SIZE) {
+            const batch = uniqueFileIds.slice(i, i + BATCH_SIZE)
+            await Promise.all(batch.map((epId) => sonarr.deleteEpisodeFile(epId)))
+          }
+          details = `Deleted ${uniqueFileIds.length} episodes from Sonarr series: ${series.title}`
         } else if (removeFromLibrary) {
           await sonarr.deleteSeries(series.id, true)
           details = `Removed entire series from Sonarr library: ${series.title}`
@@ -275,7 +370,11 @@ export async function deleteMediaAction(input: unknown) {
           await sonarr.unmonitorSeries(series.id)
           const files = await sonarr.getEpisodeFiles(series.id)
           if (files.length > 0) {
-            await Promise.all(files.map((f) => sonarr.deleteEpisodeFile(f.id)))
+            const BATCH_SIZE = 8
+            for (let i = 0; i < files.length; i += BATCH_SIZE) {
+              const batch = files.slice(i, i + BATCH_SIZE)
+              await Promise.all(batch.map((f) => sonarr.deleteEpisodeFile(f.id)))
+            }
           }
           details = `Unmonitored series and deleted ${files.length} episode files from Sonarr: ${series.title}`
         }
@@ -288,12 +387,6 @@ export async function deleteMediaAction(input: unknown) {
   }
 
   console.log(`[WatchedSeerr] Purged media: ${id} (${details})`)
-  invalidateAuditCache()
-  try {
-    revalidatePath("/")
-    revalidatePath("/matrix")
-  } catch {
-    // Outside Next.js request context (e.g. tests)
-  }
+  revalidateAuditViews()
   return { success: true, purgedId: id, details }
 }

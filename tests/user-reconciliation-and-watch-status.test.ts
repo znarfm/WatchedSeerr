@@ -1,7 +1,11 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import { auditMedia, invalidateAuditCache } from "../lib/audit"
-import { getSeriesEpisodesAction, refreshAuditAction } from "../lib/actions"
+import {
+  getSeriesEpisodesAction,
+  refreshAuditAction,
+  invalidateEpisodeCache,
+} from "../lib/actions"
 import { SeerrClient } from "../lib/clients/seerr"
 import { JellyfinClient } from "../lib/clients/jellyfin"
 import type {
@@ -578,7 +582,25 @@ describe("User Reconciliation and Watch Status Seam", () => {
       assert.equal(res.episodes[1].status, "unplayed")
       assert.equal(res.episodes[1].progressPercent, 0)
       assert.equal(res.episodes[1].lastPlayedDate, undefined)
+
+      // Test episode in-memory cache: second call hits cache without calling fetch
+      let fetchCalled = false
+      globalThis.fetch = (async () => {
+        fetchCalled = true
+        return { ok: true, status: 200, json: async () => ({ Items: [] }) } as unknown as Response
+      }) as unknown as typeof globalThis.fetch
+
+      const cachedRes = await getSeriesEpisodesAction("show-123", 1399, "user-456")
+      assert.equal(cachedRes.success, true)
+      assert.equal(cachedRes.episodes.length, 2)
+      assert.equal(fetchCalled, false)
+
+      // Invalidating episode cache forces network fetch
+      invalidateEpisodeCache()
+      await getSeriesEpisodesAction("show-123", 1399, "user-456")
+      assert.equal(fetchCalled, true)
     } finally {
+      invalidateEpisodeCache()
       globalThis.fetch = originalFetch
     }
   })
