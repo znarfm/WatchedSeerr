@@ -12,13 +12,9 @@ import {
 export default function Loading() {
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 space-y-4 p-3 sm:space-y-6 sm:p-6">
-      {/* Metric Cards Skeleton Grid (5 cards) */}
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
-        <div className="col-span-2 space-y-2 border border-border bg-muted/10 p-3 sm:col-span-1">
-          <Skeleton className="h-3 w-20" />
-          <Skeleton className="h-7 w-12" />
-        </div>
-        {Array.from({ length: 4 }).map((_, i) => (
+      {/* Metric Cards Skeleton Grid (6 cards) */}
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
             className="space-y-2 border border-border bg-muted/10 p-3"

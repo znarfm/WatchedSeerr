@@ -56,7 +56,11 @@ import {
   getSeriesEpisodesAction,
   refreshAuditAction,
 } from "@/lib/actions"
-import { isDeleteDisabled, buildEpisodeSubRows } from "@/lib/utils"
+import {
+  isDeleteDisabled,
+  buildEpisodeSubRows,
+  isEmptySeries,
+} from "@/lib/utils"
 import type { AuditMediaItem, ConflictStatus } from "@/types"
 import { cn } from "cn"
 import {
@@ -86,12 +90,15 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer"
 
+export type StatusFilterOption = ConflictStatus | "empty"
+
 export interface MetricCounts {
   total: number
   safe: number
   newCount: number
   conflict: number
   ghost: number
+  emptySeries: number
 }
 
 export function computeMetricCounts(items: AuditMediaItem[]): MetricCounts {
@@ -99,13 +106,20 @@ export function computeMetricCounts(items: AuditMediaItem[]): MetricCounts {
   let newCount = 0
   let conflict = 0
   let ghost = 0
+  let emptySeries = 0
+  let total = 0
   for (const item of items) {
+    if (isEmptySeries(item)) {
+      emptySeries++
+      continue
+    }
+    total++
     if (item.conflictStatus === "safe") safe++
     else if (item.conflictStatus === "new") newCount++
     else if (item.conflictStatus === "conflict") conflict++
     else if (item.conflictStatus === "ghost") ghost++
   }
-  return { total: items.length, safe, newCount, conflict, ghost }
+  return { total, safe, newCount, conflict, ghost, emptySeries }
 }
 
 export function isSearchShortcut(e: {
@@ -127,9 +141,9 @@ export function isSearchShortcut(e: {
 }
 
 export function resolveStatusCardClick(
-  currentFilter: ConflictStatus | "all",
-  clickedCard: ConflictStatus | "all"
-): ConflictStatus | undefined {
+  currentFilter: StatusFilterOption | "all" | undefined,
+  clickedCard: StatusFilterOption | "all"
+): StatusFilterOption | undefined {
   if (clickedCard === "all") return undefined
   return currentFilter === clickedCard ? undefined : clickedCard
 }
@@ -157,6 +171,9 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
     setData(initialData)
   }, [initialData])
   const [sorting, setSorting] = React.useState<SortingState>([])
+  const [currentStatusFilter, setCurrentStatusFilter] = React.useState<
+    StatusFilterOption | "all"
+  >("all")
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
@@ -336,8 +353,19 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
     }
   }
 
+  const filteredData = React.useMemo(() => {
+    if (currentStatusFilter === "empty") {
+      return data.filter(isEmptySeries)
+    }
+    const active = data.filter((item) => !isEmptySeries(item))
+    if (currentStatusFilter === "all") {
+      return active
+    }
+    return active.filter((item) => item.conflictStatus === currentStatusFilter)
+  }, [data, currentStatusFilter])
+
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     state: {
       sorting,
@@ -375,9 +403,6 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
 
   const currentTypeFilter =
     (table.getColumn("mediaType")?.getFilterValue() as string) || "all"
-  const currentStatusFilter =
-    (table.getColumn("status")?.getFilterValue() as
-      ConflictStatus | undefined) || "all"
   const currentRequesterFilter =
     (table.getColumn("requester")?.getFilterValue() as string) || "all"
   const currentWatchStateFilter =
@@ -385,9 +410,13 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
   const currentWhitelistFilter =
     (table.getColumn("whitelisted")?.getFilterValue() as string) || "all"
 
-  const handleCardClick = (card: ConflictStatus | "all") => {
+  const handleCardClick = (card: StatusFilterOption | "all") => {
     const nextFilter = resolveStatusCardClick(currentStatusFilter, card)
-    table.getColumn("status")?.setFilterValue(nextFilter)
+    if (nextFilter === "empty" && currentTypeFilter === "movie") {
+      table.getColumn("mediaType")?.setFilterValue(undefined)
+    }
+    setCurrentStatusFilter(nextFilter ?? "all")
+    table.setPageIndex(0)
   }
 
   const isFiltered =
@@ -405,15 +434,22 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
     (currentWatchStateFilter !== "all" ? 1 : 0) +
     (currentWhitelistFilter !== "all" ? 1 : 0)
 
+  const handleResetFilters = () => {
+    setGlobalFilter("")
+    setCurrentStatusFilter("all")
+    table.resetColumnFilters()
+    table.setPageIndex(0)
+  }
+
   return (
     <div className="space-y-4">
       {/* Metric Summary Cards */}
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
         <button
           type="button"
           aria-pressed={currentStatusFilter === "all"}
           onClick={() => handleCardClick("all")}
-          className="col-span-2 w-full cursor-pointer text-left focus-visible:outline-none sm:col-span-1"
+          className="w-full cursor-pointer text-left focus-visible:outline-none"
         >
           <Card
             className={cn(
@@ -548,6 +584,34 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
             </CardContent>
           </Card>
         </button>
+
+        <button
+          type="button"
+          aria-pressed={currentStatusFilter === "empty"}
+          onClick={() => handleCardClick("empty")}
+          className="w-full cursor-pointer text-left focus-visible:outline-none"
+        >
+          <Card
+            className={cn(
+              "transition-colors",
+              currentStatusFilter === "empty"
+                ? "border-purple-500/40 bg-purple-500/15 ring-1 ring-purple-500"
+                : "border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10"
+            )}
+          >
+            <CardHeader className="flex flex-row items-center justify-between px-3 pt-3 pb-1">
+              <CardTitle className="text-[11px] font-normal tracking-wider text-purple-400 uppercase">
+                Empty Series
+              </CardTitle>
+              <IconDeviceTv className="size-3.5 text-purple-400" />
+            </CardHeader>
+            <CardContent className="px-3 pb-3">
+              <span className="font-mono text-2xl font-bold text-purple-400">
+                {metricCounts.emptySeries}
+              </span>
+            </CardContent>
+          </Card>
+        </button>
       </div>
 
       <Separator />
@@ -605,6 +669,9 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
             <Tabs
               value={currentTypeFilter}
               onValueChange={(val) => {
+                if (val === "movie" && currentStatusFilter === "empty") {
+                  setCurrentStatusFilter("all")
+                }
                 table
                   .getColumn("mediaType")
                   ?.setFilterValue(val === "all" ? undefined : val)
@@ -791,10 +858,7 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
                   variant="ghost"
                   size="sm"
                   className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
-                  onClick={() => {
-                    setGlobalFilter("")
-                    table.resetColumnFilters()
-                  }}
+                  onClick={handleResetFilters}
                 >
                   Reset
                 </Button>
@@ -837,6 +901,9 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
             <Tabs
               value={currentTypeFilter}
               onValueChange={(val) => {
+                if (val === "movie" && currentStatusFilter === "empty") {
+                  setCurrentStatusFilter("all")
+                }
                 table
                   .getColumn("mediaType")
                   ?.setFilterValue(val === "all" ? undefined : val)
@@ -971,10 +1038,7 @@ export function DataTable({ initialData, disableDelete }: DataTableProps) {
                   variant="ghost"
                   size="xs"
                   className="text-xs text-muted-foreground hover:text-foreground"
-                  onClick={() => {
-                    setGlobalFilter("")
-                    table.resetColumnFilters()
-                  }}
+                  onClick={handleResetFilters}
                 >
                   Reset
                 </Button>

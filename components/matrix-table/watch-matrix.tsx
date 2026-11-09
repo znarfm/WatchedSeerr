@@ -58,7 +58,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer"
 import { refreshAuditAction } from "@/lib/actions"
-import { isDeleteDisabled } from "@/lib/utils"
+import { isDeleteDisabled, isEmptySeries } from "@/lib/utils"
 import { cn } from "cn"
 import type { AuditMediaItem, ConflictStatus, UserPlaybackState } from "@/types"
 
@@ -188,7 +188,7 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
   >("all")
   const [requesterFilter, setRequesterFilter] = React.useState("all")
   const [statusFilter, setStatusFilter] = React.useState<
-    "all" | ConflictStatus
+    "all" | ConflictStatus | "empty"
   >("all")
   const [sortField, setSortField] = React.useState<
     "default" | "title" | string
@@ -275,6 +275,14 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
   // Filtered and sorted rows
   const filteredAndSortedItems = React.useMemo(() => {
     let result = data.filter((item) => {
+      if (statusFilter === "empty") {
+        if (!isEmptySeries(item)) return false
+      } else {
+        if (isEmptySeries(item)) return false
+        if (statusFilter !== "all" && item.conflictStatus !== statusFilter) {
+          return false
+        }
+      }
       if (search.trim()) {
         const query = search.trim().toLowerCase()
         if (!item.title.toLowerCase().includes(query)) {
@@ -427,6 +435,9 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
             <Tabs
               value={mediaTypeFilter}
               onValueChange={(val) => {
+                if (val === "movie" && statusFilter === "empty") {
+                  setStatusFilter("all")
+                }
                 setMediaTypeFilter(val as "all" | "movie" | "tv")
                 setPageIndex(0)
               }}
@@ -530,7 +541,10 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
                         value={statusFilter}
                         onValueChange={(val) => {
                           if (val) {
-                            setStatusFilter(val as "all" | ConflictStatus)
+                            if (val === "empty" && mediaTypeFilter === "movie") {
+                              setMediaTypeFilter("all")
+                            }
+                            setStatusFilter(val as "all" | ConflictStatus | "empty")
                             setPageIndex(0)
                           }
                         }}
@@ -542,13 +556,15 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
                               {(val: string | null) =>
                                 val === "all" || !val
                                   ? "All Statuses"
-                                  : val === "safe"
-                                    ? "Safe"
-                                    : val === "new"
-                                      ? "New"
-                                      : val === "conflict"
-                                        ? "Conflict"
-                                        : "Ghost"
+                                  : val === "empty"
+                                    ? "Empty Series"
+                                    : val === "safe"
+                                      ? "Safe"
+                                      : val === "new"
+                                        ? "New"
+                                        : val === "conflict"
+                                          ? "Conflict"
+                                          : "Ghost"
                               }
                             </SelectValue>
                           </div>
@@ -559,6 +575,7 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
                           <SelectItem value="new">New</SelectItem>
                           <SelectItem value="conflict">Conflict</SelectItem>
                           <SelectItem value="ghost">Ghost</SelectItem>
+                          <SelectItem value="empty">Empty Series (0 B)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -620,6 +637,9 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
             <Tabs
               value={mediaTypeFilter}
               onValueChange={(val) => {
+                if (val === "movie" && statusFilter === "empty") {
+                  setStatusFilter("all")
+                }
                 setMediaTypeFilter(val as "all" | "movie" | "tv")
                 setPageIndex(0)
               }}
@@ -685,7 +705,10 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
                 value={statusFilter}
                 onValueChange={(val) => {
                   if (val) {
-                    setStatusFilter(val as "all" | ConflictStatus)
+                    if (val === "empty" && mediaTypeFilter === "movie") {
+                      setMediaTypeFilter("all")
+                    }
+                    setStatusFilter(val as "all" | ConflictStatus | "empty")
                     setPageIndex(0)
                   }
                 }}
@@ -697,13 +720,15 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
                       {(val: string | null) =>
                         val === "all" || !val
                           ? "All Statuses"
-                          : val === "safe"
-                            ? "Safe"
-                            : val === "new"
-                              ? "New"
-                              : val === "conflict"
-                                ? "Conflict"
-                                : "Ghost"
+                          : val === "empty"
+                            ? "Empty Series"
+                            : val === "safe"
+                              ? "Safe"
+                              : val === "new"
+                                ? "New"
+                                : val === "conflict"
+                                  ? "Conflict"
+                                  : "Ghost"
                       }
                     </SelectValue>
                   </div>
@@ -714,6 +739,7 @@ export function WatchMatrix({ initialData, disableDelete }: WatchMatrixProps) {
                   <SelectItem value="new">New</SelectItem>
                   <SelectItem value="conflict">Conflict</SelectItem>
                   <SelectItem value="ghost">Ghost</SelectItem>
+                  <SelectItem value="empty">Empty Series (0 B)</SelectItem>
                 </SelectContent>
               </Select>
 

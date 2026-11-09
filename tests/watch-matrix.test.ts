@@ -233,6 +233,7 @@ describe("Watch Matrix Unit Seams", () => {
         title: "Fresh Show",
         year: 2024,
         mediaType: "tv",
+        sizeBytes: 500_000_000,
         requestedAt: "2026-01-02T00:00:00Z",
         requester: {
           id: 2,

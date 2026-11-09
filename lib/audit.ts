@@ -501,9 +501,9 @@ export async function auditMedia(
       ) || epStats?.videoStream
     const { quality, qualityFull } = normalizeVideoQuality(videoStream, is4k)
     const sizeBytes =
-      jellyfinItem.Size ??
-      jellyfinItem.MediaSources?.[0]?.Size ??
-      (epStats && epStats.totalSize > 0 ? epStats.totalSize : undefined)
+      mediaType === "tv"
+        ? (epStats && epStats.totalSize > 0 ? epStats.totalSize : 0)
+        : (jellyfinItem.Size ?? jellyfinItem.MediaSources?.[0]?.Size ?? 0)
 
     const resolvedImdbId = jellyfinItem.ProviderIds?.Imdb || imdbId
     const externalLinks = buildMediaExternalLinks({

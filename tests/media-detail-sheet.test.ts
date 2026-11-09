@@ -351,6 +351,21 @@ describe("MediaDetailSheet Seam", () => {
         disabledHtml.includes("Whitelist Media"),
         "Whitelist button remains when disableDelete is true"
       )
+
+      const emptySeriesHtml = renderBody({
+        selectedItem: {
+          ...mockTvSeries,
+          sizeBytes: 0,
+        },
+      })
+      assert.ok(
+        emptySeriesHtml.includes("No Files to Purge"),
+        "Purge button shows No Files to Purge when series has 0 bytes"
+      )
+      assert.ok(
+        emptySeriesHtml.includes("No files to delete; monitored in Sonarr"),
+        "Button tooltip explains why purge is disabled"
+      )
     })
 
     it("derives latest last played date from subitems for series parent and renders household playback on subitem sheet", () => {
@@ -430,15 +445,15 @@ describe("MediaDetailSheet Seam", () => {
 })
 
 describe("Route-Level Skeleton Loaders Seam", () => {
-  it("renders Audit Queue route skeleton (app/loading.tsx) with 5 metric cards, toolbar, and 10 rows", () => {
+  it("renders Audit Queue route skeleton (app/loading.tsx) with 6 metric cards, toolbar, and 10 rows", () => {
     const html = renderToStaticMarkup(React.createElement(Loading))
 
-    // 5 metric card grid
+    // 6 metric card grid
     assert.ok(
       html.includes(
-        "grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5"
+        "grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6"
       ),
-      "Contains 5-card responsive metric grid"
+      "Contains 6-card responsive metric grid"
     )
 
     // Toolbar skeleton

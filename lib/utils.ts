@@ -27,6 +27,13 @@ export function isDeleteDisabled(): boolean {
   return false
 }
 
+export function isEmptySeries(item: {
+  mediaType?: string
+  sizeBytes?: number | null
+}): boolean {
+  return item.mediaType === "tv" && (!item.sizeBytes || item.sizeBytes <= 0)
+}
+
 export function calculateDaysAgo(dateStr?: string): number | null {
   if (!dateStr) return null
   const date = new Date(dateStr)

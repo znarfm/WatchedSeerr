@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import type { Column, ColumnDef, RowData } from "@tanstack/react-table"
 import type { AuditMediaItem } from "@/types"
-import { formatMediaSize } from "@/lib/utils"
+import { formatMediaSize, isEmptySeries } from "@/lib/utils"
 import { cn } from "cn"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -431,8 +431,17 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
     header: ({ column }) => (
       <SortHeader column={column} title="Retention Status" />
     ),
-    filterFn: "equalsString",
     cell: ({ row }) => {
+      if (isEmptySeries(row.original)) {
+        return (
+          <Badge
+            variant="outline"
+            className="gap-1 border-purple-500/30 bg-purple-500/10 text-purple-400"
+          >
+            <IconDeviceTv className="size-3" /> Empty
+          </Badge>
+        )
+      }
       const status = row.original.conflictStatus
       if (status === "safe") {
         return (
@@ -535,7 +544,7 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
                     size="icon"
                     variant="ghost"
                     className="size-7 text-rose-500 hover:bg-rose-500/10 hover:text-rose-600"
-                    disabled={meta?.isPending}
+                    disabled={meta?.isPending || isEmptySeries(item)}
                     onClick={() => {
                       if (isSubRow) {
                         meta?.onDelete(
@@ -544,6 +553,7 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
                           sonarrEpisodeFileId
                         )
                       } else {
+                        if (isEmptySeries(item)) return
                         meta?.onDelete(item, "all")
                       }
                     }}
@@ -553,7 +563,11 @@ export const columns: ColumnDef<AuditMediaItem>[] = [
                 <IconTrash className="size-4" />
               </TooltipTrigger>
               <TooltipContent>
-                {isSubRow ? "Delete episode file" : "Delete media"}
+                {isSubRow
+                  ? "Delete episode file"
+                  : isEmptySeries(item)
+                    ? "No files to delete (monitored in Sonarr)"
+                    : "Delete media"}
               </TooltipContent>
             </Tooltip>
           )}

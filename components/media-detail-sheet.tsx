@@ -38,6 +38,7 @@ import {
   isDeleteDisabled,
   buildEpisodeSubRows,
   calculateDaysAgo,
+  isEmptySeries,
 } from "@/lib/utils"
 
 export interface DeleteTarget {
@@ -467,10 +468,15 @@ export function MediaDetailSheetBody({
           <Button
             variant="destructive"
             size="sm"
-            disabled={isPending}
+            disabled={isPending || isEmptySeries(selectedItem)}
             onClick={onPurge}
+            title={
+              isEmptySeries(selectedItem)
+                ? "No files to delete; monitored in Sonarr"
+                : undefined
+            }
           >
-            Purge Media
+            {isEmptySeries(selectedItem) ? "No Files to Purge" : "Purge Media"}
           </Button>
         )}
       </SheetFooter>

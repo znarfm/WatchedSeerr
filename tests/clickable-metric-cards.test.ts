@@ -9,6 +9,7 @@ import {
   isSearchShortcut,
 } from "../components/audit-table/data-table"
 import { sortInactiveDays, columns } from "../components/audit-table/columns"
+import { isEmptySeries } from "../lib/utils"
 import { TooltipProvider } from "../components/ui/tooltip"
 import type { AuditMediaItem } from "../types"
 
@@ -118,6 +119,7 @@ const mockItems: AuditMediaItem[] = [
     title: "Agatha All Along",
     year: 2024,
     mediaType: "tv",
+    sizeBytes: 1_200_000_000,
     requestedAt: "2026-03-01T00:00:00Z",
     requester: {
       id: 4,
@@ -148,6 +150,7 @@ describe("Clickable Metric Cards & Table UX Seam", () => {
       newCount: 1,
       conflict: 1,
       ghost: 1,
+      emptySeries: 0,
     })
 
     // After purging first item
@@ -158,7 +161,51 @@ describe("Clickable Metric Cards & Table UX Seam", () => {
       newCount: 1,
       conflict: 1,
       ghost: 1,
+      emptySeries: 0,
     })
+
+    // Excludes 0-byte TV series from metric counts and tracks emptySeries
+    const withEmptySeries: AuditMediaItem[] = [
+      ...mockItems,
+      {
+        id: "item-empty-tv",
+        requestId: 5,
+        tmdbId: 105,
+        title: "Empty TV Series",
+        mediaType: "tv",
+        sizeBytes: 0,
+        conflictStatus: "ghost",
+        conflictReason: "No episodes downloaded",
+        requestedAt: "2024-01-01T00:00:00Z",
+        requester: { id: 5, username: "eve" },
+        requesterState: {
+          userId: "u-5",
+          username: "eve",
+          isRequester: true,
+          status: "unplayed",
+          progressPercent: 0,
+          playCount: 0,
+        },
+        householdStates: [],
+        daysSinceLastPlayed: null,
+        isWhitelisted: false,
+      },
+    ]
+    const countsWithEmpty = computeMetricCounts(withEmptySeries)
+    assert.deepEqual(countsWithEmpty, {
+      total: 4,
+      safe: 1,
+      newCount: 1,
+      conflict: 1,
+      ghost: 1,
+      emptySeries: 1,
+    })
+    assert.equal(isEmptySeries({ mediaType: "tv", sizeBytes: 0 }), true)
+    assert.equal(isEmptySeries({ mediaType: "tv", sizeBytes: undefined }), true)
+    assert.equal(isEmptySeries({ mediaType: "tv", sizeBytes: null }), true)
+    assert.equal(isEmptySeries({ mediaType: "tv", sizeBytes: 100 }), false)
+    assert.equal(isEmptySeries({ mediaType: "movie", sizeBytes: 0 }), false)
+    assert.equal(isEmptySeries({ mediaType: "movie", sizeBytes: undefined }), false)
   })
 
   it("resolveStatusCardClick handles status selection and toggling back to all", () => {
@@ -167,17 +214,20 @@ describe("Clickable Metric Cards & Table UX Seam", () => {
     assert.equal(resolveStatusCardClick("all", "new"), "new")
     assert.equal(resolveStatusCardClick("all", "conflict"), "conflict")
     assert.equal(resolveStatusCardClick("all", "ghost"), "ghost")
+    assert.equal(resolveStatusCardClick("all", "empty"), "empty")
 
     // Clicking the already-active category toggles it back to undefined ("all")
     assert.equal(resolveStatusCardClick("safe", "safe"), undefined)
     assert.equal(resolveStatusCardClick("new", "new"), undefined)
     assert.equal(resolveStatusCardClick("conflict", "conflict"), undefined)
     assert.equal(resolveStatusCardClick("ghost", "ghost"), undefined)
+    assert.equal(resolveStatusCardClick("empty", "empty"), undefined)
 
     // Switching between categories selects the newly clicked one
     assert.equal(resolveStatusCardClick("safe", "new"), "new")
     assert.equal(resolveStatusCardClick("new", "conflict"), "conflict")
     assert.equal(resolveStatusCardClick("conflict", "ghost"), "ghost")
+    assert.equal(resolveStatusCardClick("ghost", "empty"), "empty")
 
     // Clicking "Total Audited" ("all") always clears filter to undefined
     assert.equal(resolveStatusCardClick("safe", "all"), undefined)
@@ -310,7 +360,7 @@ describe("Clickable Metric Cards & Table UX Seam", () => {
     )
   })
 
-  it("renders DataTable SSR markup with 5 clickable metric card buttons, toolbar filters, Kbd hints, and responsive columns", () => {
+  it("renders DataTable SSR markup with 6 clickable metric card buttons, toolbar filters, Kbd hints, and responsive columns", () => {
     const html = renderToStaticMarkup(
       React.createElement(
         TooltipProvider,
@@ -319,10 +369,10 @@ describe("Clickable Metric Cards & Table UX Seam", () => {
       )
     )
 
-    // Metric cards rendered in responsive 5-card grid
+    // Metric cards rendered in responsive 6-card grid
     assert.ok(
       html.includes(
-        "grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5"
+        "grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6"
       ),
       "Metric cards arranged in responsive grid"
     )
@@ -338,6 +388,7 @@ describe("Clickable Metric Cards & Table UX Seam", () => {
     assert.ok(html.includes("text-sky-500"))
     assert.ok(html.includes("Active Conflicts"))
     assert.ok(html.includes("Ghost Requests"))
+    assert.ok(html.includes("Empty Series"))
 
     // Keyboard shortcut hints rendered
     assert.ok(html.includes("Ctrl"), "Search bar contains Ctrl Kbd")
@@ -412,6 +463,55 @@ describe("Clickable Metric Cards & Table UX Seam", () => {
     assert.ok(
       html.includes("Rows per page:"),
       "Pagination footer includes rows-per-page label"
+    )
+
+    // 6th metric card: Empty Series
+    assert.ok(
+      html.includes("Empty Series"),
+      "Grid includes Empty Series metric card"
+    )
+    assert.ok(
+      html.includes("lg:grid-cols-6"),
+      "Grid uses responsive 6-column layout"
+    )
+
+    const htmlWithEmpty = renderToStaticMarkup(
+      React.createElement(
+        TooltipProvider,
+        null,
+        React.createElement(DataTable, {
+          initialData: [
+            ...mockItems,
+            {
+              id: "item-empty-tv",
+              requestId: 5,
+              tmdbId: 105,
+              title: "Hidden Empty Series",
+              mediaType: "tv",
+              sizeBytes: 0,
+              conflictStatus: "ghost",
+              conflictReason: "No episodes downloaded",
+              requestedAt: "2024-01-01T00:00:00Z",
+              requester: { id: 5, username: "eve" },
+              requesterState: {
+                userId: "u-5",
+                username: "eve",
+                isRequester: true,
+                status: "unplayed",
+                progressPercent: 0,
+                playCount: 0,
+              },
+              householdStates: [],
+              daysSinceLastPlayed: null,
+              isWhitelisted: false,
+            },
+          ],
+        })
+      )
+    )
+    assert.ok(
+      !htmlWithEmpty.includes("Hidden Empty Series"),
+      "0-byte TV series is hidden from audit queue by default"
     )
 
     // Delete buttons rendered when disableDelete is false
